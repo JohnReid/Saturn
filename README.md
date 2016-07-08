@@ -9,4 +9,5 @@ Prediction Challenge](https://www.synapse.org/#!Synapse:syn6131484).
 
 The structure of this repository is laid out as:
 
-- Resources: Scripts to download the data and the challenge rules.
+- Resources: scripts to download the data and the challenge rules.
+- Docs: documents about the challenge, methods, papers, etc...
