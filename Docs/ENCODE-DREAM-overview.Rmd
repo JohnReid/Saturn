@@ -59,7 +59,7 @@ parse.line <- function(l) {
     parsed
 }
 parsed <- lapply(lines, parse.line)
-type.for.col <- function(col) {
+split.for.col <- function(col) {
     if (2 == col) return('train')
     if (3 == col) return('ladder')
     if (4 == col) return('submit')
@@ -68,7 +68,7 @@ parse.tfs <- function(parsed, col) {
     data.frame(
         TF=parsed[[1]],
         cell=str_split(parsed[[col]], fixed(', '))[[1]],
-        type=type.for.col(col))
+        split=split.for.col(col))
 }
 parse.cols <- function(parsed) {
     res <- parse.tfs(parsed, 2)
@@ -77,6 +77,21 @@ parse.cols <- function(parsed) {
     res %>% filter("" != cell)
 }
 tfs <- do.call(rbind, lapply(parsed, parse.cols))
+tf.levels <- levels(tfs$TF)
+cell.levels <- levels(tfs$cell)
+#
+# Add information about which TF/cell type combos are true blind
+true.blind.ladder <- data.frame(
+    TF = factor(c('ATF2', 'ATF7', 'CREB1', 'FOXA1', 'TCF12'), levels=tf.levels),
+    cell = factor(c('K562', 'MCF-7', 'MCF-7', 'MCF-7', 'K562'), levels=cell.levels),
+    true.blind = TRUE)
+tfs <- tfs %>% left_join(true.blind.ladder) %>%
+    mutate(
+        true.blind = ifelse(is.na(true.blind), 'submit' == split, true.blind),
+        split.blind = ifelse('ladder'==split,
+                             ifelse(true.blind, 'ladder.blind', 'ladder'),
+                             as.character(split)))
+tfs
 ```
 
 
@@ -97,13 +112,17 @@ types of data:
 TFs have different binding profiles in different cell types. `r length(unique(tfs$TF))`
 TFs and `r length(unique(tfs$cell))` cell types are represented in the data although not
 all combinations are present.
+
 ```{r, echo=FALSE}
-ggplot(tfs, aes(TF, cell)) + geom_tile(aes(fill=type), colour = "white") +
+ggplot(tfs, aes(TF, cell)) +
+    geom_tile(aes(fill=split.blind), colour='white') +
     scale_fill_few() +
     theme_tufte() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
+
 There are essentially three (two!?) prediction tasks:
+
 - Held-out chromosomes: For each TF/cell-type combination, the ChIP-seq data will
   not be available for 3 chromosomes. Methods will be assessed by their predictive
   performance on these chromosomes.
@@ -157,7 +176,8 @@ The first two will be much easier to use as they summarise the last two.
 
 Participants are encouraged to use the [DNAshapeR](http://tsupeichiu.github.io/DNAshapeR/) to
 calculate DNA shape features across the genome. This information is not cell-type specific but
-has been shown to be predictive of TF-DNA binding.
+has been shown to be predictive of TF-DNA binding. Note that `DNAshapeR` requires a version of
+R $> 3.3$.
 
 
 ### Gene expression
@@ -168,4 +188,16 @@ The major difficulties are that
   regulate the closest gene but this is not always the case.
 - Several TFs can combine in an unknown way to regulate a gene.
 - There are other mechanisms of gene regulation that will confound the relationship.
+
+
+
+## Transcription factors
+
+
+### Motifs
+
+- Hard to find motif for *TAF1*. Is *TBP* a good motif to use?
+
+
+
 
