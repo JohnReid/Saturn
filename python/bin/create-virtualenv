@@ -6,4 +6,4 @@ virtualenv \
     --python=python2 \
     virtualenv
 . virtualenv/bin/activate
-pip3 install -r reqd-pkgs.txt
+pip install -r reqd-pkgs.txt
