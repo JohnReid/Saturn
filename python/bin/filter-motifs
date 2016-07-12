@@ -1,0 +1,32 @@
+#!/usr/bin/env python2
+
+import sys
+import re
+
+# Parse regexes from command line
+regex_args = sys.argv[1:]
+regexes = map(lambda x: re.compile(x, flags=re.IGNORECASE), regex_args)
+counts = [0] * len(regexes)
+
+active = False
+while True:
+    # Read a line
+    l = sys.stdin.readline()
+    # Break if finished input
+    if not l:
+        break
+    # Is it the start of a new motif?
+    if l.startswith('MOTIF'):
+        active = False
+        # Check if any of our regexes match
+        for i, regex in enumerate(regexes):
+            if regex.search(l):
+                active = True
+                counts[i] += 1
+                break
+    # Write the line if active
+    if active:
+        sys.stdout.write(l)
+
+for i, regex in enumerate(regexes):
+    sys.stderr.write('{} {}\n'.format(regex.pattern, counts[i]))

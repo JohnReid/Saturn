@@ -1,0 +1,17 @@
+#!/bin/bash -ex
+
+#
+# Use genome scanning optimised version of STEME
+export STEME_USE_GENOME_INDEX=1
+
+# MOTIFSFILE=/etc/STEME/MEME-dbs/EUKARYOTE/jolma2013.meme
+SATURN=/home/john/Dev/Saturn
+MOTIFSFILE=$SATURN/Data/motifs/tf-motifs.meme
+GENOME=$SATURN/Data/annotations/hg19.chrs.fa
+
+steme-pwm-scan \
+    --prediction-Z-threshold=.7 \
+    --lambda=.001 \
+    --cache-index \
+    $MOTIFSFILE \
+    $GENOME
