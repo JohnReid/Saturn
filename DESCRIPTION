@@ -4,7 +4,10 @@ Version: 0.0.0.9000
 Authors@R: c(person("John", "Reid", role = c("aut", "cre"),
                     email = "johnbaronreid@gmail.com"))
 Description: What the package does (one paragraph).
-Depends: R (>= 3.2.5)
+Depends: R (>= 3.2.5),
+    dplyr,
+    ggplot2,
+    memoise
 License: MIT
 Encoding: UTF-8
 LazyData: true
