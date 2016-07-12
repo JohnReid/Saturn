@@ -13,7 +13,8 @@
 chrs.levels <- c(str_c('chr', 1:22), 'chrX')
 
 #' The root directory of the Saturn data.
-saturn.data <- function() system.file('Data', package='Saturn')
+saturn.data <- function() getOption('saturn.data',
+                                    system.file('Data', package='Saturn'))
 
 
 #' Load expression data.
@@ -36,6 +37,25 @@ load.chip.labels <- function(tf) {
 #' Load a narrowPeak file.
 load.narrowpeak <- function(path) readr::read_tsv(path, col_names = .NARROWPEAK.COLS)
 
+#' Convert a narrowPeak data frame to GRanges.
+labels.granges <- function(labels) with(labels,
+  GRanges(
+    seqnames = Rle(chr),
+    ranges = IRanges(start = start, end = stop),
+    mcols = labels %>% dplyr::select(-chr, -start, -stop)))
+
+#' Convert binding factor to numeric
+binding.as.numeric <- function(binding) ifelse('B' == binding, 1, ifelse('A' == binding, .5, 0))
+
+#' Convert a narrowPeak data frame to GRanges.
+narrowpeak.granges <- function(narrowpeak) with(narrowpeak,
+  GRanges(
+    seqnames = Rle(chrom),
+    ranges = IRanges(start = chromStart, end = chromEnd),
+    signal = signalValue,
+    pValue = pValue,
+    qValue = qValue,
+    peak = peak))
 
 #' Load ChIP peaks
 load.chip.peaks <- function(cell, tf, type='conservative') {
