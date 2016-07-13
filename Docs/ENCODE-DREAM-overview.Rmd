@@ -5,11 +5,16 @@ output: pdf_document
 ---
 
 ```{r echo=FALSE, eval=FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
 rmarkdown::render('ENCODE-DREAM-overview.Rmd')
 ```
 
 
-```{r parseCombos, echo=FALSE}
+```{r parseCombos, echo=FALSE, message=FALSE}
+library(Saturn)
 library(stringr)
 library(dplyr)
 library(reshape2)
@@ -91,7 +96,6 @@ tfs <- tfs %>% left_join(true.blind.ladder) %>%
         split.blind = ifelse('ladder'==split,
                              ifelse(true.blind, 'ladder.blind', 'ladder'),
                              as.character(split)))
-tfs
 ```
 
 
@@ -102,9 +106,9 @@ predict cell-type specific binding of transcription factors (TFs) using four
 types of data:
 
 - DNA sequence: a reference human genomic sequence
-- *In-vitro* DNA shape: the physical shape of the genome in an *in-vitro* system
-- DNase-seq: how open and accessible regions of the genome are
-- RNA-seq: levels of gene expression
+- DNA shape: the physical shape of the genome
+- DNase-seq: experimental evidence for how open and accessible regions of the genome are
+- RNA-seq: gene expression levels
 
 
 ## TF/cell-type combinations
@@ -118,7 +122,7 @@ ggplot(tfs, aes(TF, cell)) +
     geom_tile(aes(fill=split.blind), colour='white') +
     scale_fill_few() +
     theme_tufte() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
 ```
 
 There are essentially three (two!?) prediction tasks:
