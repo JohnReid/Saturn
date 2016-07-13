@@ -25,7 +25,7 @@ load.narrowpeak <- function(path) readr::read_tsv(path, col_names = .NARROWPEAK.
 narrowpeak.granges <- function(narrowpeak) with(narrowpeak,
   GRanges(
     seqnames = Rle(chrom),
-    ranges = IRanges(start = chromStart, end = chromEnd),
+    ranges = IRanges(start = chromStart+1, end = chromEnd),
     signal = signalValue,
     pValue = pValue,
     qValue = qValue,
@@ -40,7 +40,7 @@ binding.as.numeric <- function(binding) ifelse('B' == binding, 1, ifelse('A' == 
 labels.granges <- function(labels) with(labels,
   GRanges(
     seqnames = Rle(chr),
-    ranges = IRanges(start = start, end = stop),
+    ranges = IRanges(start = start+1, end = stop),
     mcols = labels %>% dplyr::select(-chr, -start, -stop)))
 
 
@@ -111,7 +111,7 @@ load.motif.scan <- memoise::memoise(function(results.path, seqs.path) {
            end = position + str_length(w.mer)),
     GRanges(
       seqnames = Rle(chr),
-      ranges = IRanges(start = position, end = end),
+      ranges = IRanges(start = position+1, end = end),
       strand = strand,
       motif = motif,
       Z = Z,

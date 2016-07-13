@@ -2,6 +2,7 @@ library(ggplot2)
 library(dplyr)
 library(stringr)
 library(GenomicRanges)
+library(BSgenome.Hsapiens.UCSC.hg19)
 options(dplyr.width = Inf)
 
 devtools::load_all('.')
@@ -80,3 +81,23 @@ motif.scan <- load.motif.scan(
   file.path(saturn.data(), 'motifs', 'steme-pwm-scan.out'),
   file.path(saturn.data(), 'motifs', 'steme-pwm-scan.seqs'))
 motif.scan
+motif.scan[37373737,]
+
+
+#
+# Test BSgenome.Hsapiens.UCSC.hg19
+hg19 <- BSgenome.Hsapiens.UCSC.hg19
+seqinfo(hg19)
+starts <- c(
+  40715041,
+  5014919,
+  24662264)
+gr <- GRanges(
+  seqnames = c('chr17', 'chr17', 'chr14'),
+  ranges = IRanges(start = starts+1, width = 14),
+  seqinfo = seqinfo(hg19))
+seqs <- getSeq(hg19, gr)
+seqs[[1]]
+seqs[[2]]
+seqs[[3]][1:4]
+
