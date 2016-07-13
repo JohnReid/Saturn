@@ -72,3 +72,11 @@ arid3a.labels
 'chr8' %in% seqlevels(arid3a.labels)
 'chr21' %in% seqlevels(arid3a.labels)
 # No
+
+
+#
+# Load motif scan results
+motif.scan <- load.motif.scan(
+  file.path(saturn.data(), 'motifs', 'steme-pwm-scan.out'),
+  file.path(saturn.data(), 'motifs', 'steme-pwm-scan.seqs'))
+motif.scan

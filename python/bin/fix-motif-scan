@@ -1,0 +1,3 @@
+#!/bin/sed -f
+#
+s/^HNF4A_NR2F1,2.p2/HNF4A_NR2F1.2.p2/

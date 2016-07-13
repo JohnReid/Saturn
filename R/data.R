@@ -98,3 +98,23 @@ load.dnase.peaks <- function(cell, type='conservative') {
     file.path(saturn.data(), 'DNASE', 'peaks', type,
               str_c('DNASE.', cell, '.', type, '.narrowPeak.gz'))))
 }
+
+#' Load motif scan results
+load.motif.scan <- memoise::memoise(function(results.path, seqs.path) {
+  motif.seqs <- readr::read_csv(seqs.path)
+  with(
+    readr::read_csv(
+      results.path, skip = 1, col_types = 'cciicnnn', progress = FALSE,
+      col_names = c('motif', 'w.mer', 'seq', 'position', 'strand',
+                    'Z', 'score', 'p.value')) %>%
+    mutate(chr = motif.seqs$ID[seq+1],
+           end = position + str_length(w.mer)),
+    GRanges(
+      seqnames = Rle(chr),
+      ranges = IRanges(start = position, end = end),
+      strand = strand,
+      motif = motif,
+      Z = Z,
+      score = score,
+      p.value = p.value))
+})
