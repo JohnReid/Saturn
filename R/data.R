@@ -12,6 +12,8 @@
 
 chrs.levels <- c(str_c('chr', 1:22), 'chrX')
 
+hg19 <- BSgenome.Hsapiens.UCSC.hg19
+
 #' The root directory of the Saturn data.
 saturn.data <- function() getOption('saturn.data',
                                     system.file('Data', package='Saturn'))
@@ -26,6 +28,7 @@ narrowpeak.granges <- function(narrowpeak) with(narrowpeak,
   GRanges(
     seqnames = Rle(chrom),
     ranges = IRanges(start = chromStart+1, end = chromEnd),
+    seqinfo = seqinfo(hg19),
     signal = signalValue,
     pValue = pValue,
     qValue = qValue,
@@ -41,6 +44,7 @@ labels.granges <- function(labels) with(labels,
   GRanges(
     seqnames = Rle(chr),
     ranges = IRanges(start = start+1, end = stop),
+    seqinfo = seqinfo(hg19),
     mcols = labels %>% dplyr::select(-chr, -start, -stop)))
 
 
@@ -113,6 +117,7 @@ load.motif.scan <- memoise::memoise(function(results.path, seqs.path) {
       seqnames = Rle(chr),
       ranges = IRanges(start = position+1, end = end),
       strand = strand,
+      seqinfo = seqinfo(hg19),
       motif = motif,
       Z = Z,
       score = score,
