@@ -46,7 +46,7 @@ data.frame(binding = binding,
 
 #
 # Expression data
-h1.hesc.expr.1 <- saturn.expr('H1_hESC', 1)
+h1.hesc.expr.1 <- saturn.expr('H1-hESC', 1)
 names(h1.hesc.expr.1)
 dim(h1.hesc.expr.1)
 sample_n(h1.hesc.expr.1, 2)
