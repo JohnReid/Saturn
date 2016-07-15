@@ -74,7 +74,16 @@ arid3a.labels
 'chr8' %in% seqlevels(arid3a.labels)
 'chr21' %in% seqlevels(arid3a.labels)
 # No
-
+#
+# Check if labels have same ranges for distinct TFs
+all(arid3a.labels == rest.labels)
+# Yes so we will save these regions for reference
+#
+if (FALSE) {
+  regions <- arid3a.labels
+  regions$HepG2 <- NULL
+  devtools::use_data(regions)
+}
 
 #
 # Load motif scan results
