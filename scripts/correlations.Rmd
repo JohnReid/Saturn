@@ -19,7 +19,7 @@ training.combos <- tfs %>% filter('train' == split)
 combo.cor <- function(row, dnase.peak.type) with(row, {
   message(TF, ' : ', cell)
   dnase <- summarise.dnase(cell, dnase.peak.type)
-  binding <- binding.tf.cell(TF, cell)
+  binding <- binding.tf.cell(TF, rify(cell))
   with(dnase, cor(as.integer(binding), as.vector(dnase)))
 })
 cor.cons <- training.combos %>%
