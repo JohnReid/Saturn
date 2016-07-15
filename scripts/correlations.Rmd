@@ -1,0 +1,36 @@
+---
+title: "DNase - binding correlations"
+author: John Reid
+output: pdf_document
+---
+
+```{r eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('correlations.Rmd')
+```
+
+```{r}
+library(Saturn)
+training.combos <- tfs %>% filter('train' == split)
+combo.cor <- function(row, dnase.peak.type) with(row, {
+  message(TF, ' : ', cell)
+  chip.labels <- load.chip.labels(TF)
+  dnase <- load.dnase.peaks(cell, dnase.peak.type)
+  dnase <- combine.chip.dnase(chip.labels, dnase)
+  binding <- binding.as.numeric(mcols(chip.labels)[,rify(cell)])
+  data.frame(binding = binding, dnase = dnase$dnase) %>%
+    group_by(binding) %>%
+    summarise(dnase.mean = mean(dnase),
+              dnase.sd = sd(dnase))
+  with(dnase, cor(binding, dnase))
+})
+cor.cons <- training.combos %>%
+  group_by(TF, cell) %>%
+  do(data.frame(cor=combo.cor(., 'conservative')))
+cor.relx <- training.combos %>%
+  group_by(TF, cell) %>%
+  do(data.frame(cor=combo.cor(., 'relaxed')))
+```
