@@ -7,6 +7,7 @@ Description: Model TF-binding in the DREAM-ENCODE challenge.
 Depends: R (>= 3.2.5),
     GenomicRanges,
     BSgenome.Hsapiens.UCSC.hg19,
+    rtracklayer,
     readr (>= 0.2.2.9),
     dplyr,
     reshape2,

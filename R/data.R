@@ -20,7 +20,20 @@ saturn.data <- function() getOption('saturn.data',
 
 
 #' Load a narrowPeak file.
-load.narrowpeak <- function(path) readr::read_tsv(path, col_names = .NARROWPEAK.COLS)
+load.narrowpeak <- function(path) readr::read_tsv(
+  path,
+  col_names = .NARROWPEAK.COLS,
+  col_types = cols(
+    chrom = col_factor(seqnames(hg19)),
+    chromStart = col_integer(),
+    chromEnd = col_integer(),
+    name = col_character(),
+    score = col_integer(),
+    strand = col_factor(c('+', '-')),
+    signalValue = col_double(),
+    pValue = col_double(),
+    qValue = col_double(),
+    peak = col_integer()))
 
 
 #' Convert a narrowPeak data frame to GRanges.
@@ -40,30 +53,47 @@ binding.as.numeric <- function(binding) ifelse('B' == binding, 1, ifelse('A' == 
 
 
 #' Convert a ChIP-seq labels data frame to GRanges.
-labels.granges <- function(labels) with(labels,
-  GRanges(
-    seqnames = Rle(chr),
-    ranges = IRanges(start = start+1, end = stop),
-    seqinfo = seqinfo(hg19),
-    mcols = labels %>% dplyr::select(-chr, -start, -stop)))
+labels.granges <- function(labels) {
+  mcol.names <- names(labels)[4:ncol(labels)]
+  .args = lapply(labels[,mcol.names], Rle)
+  .args$seqnames = Rle(labels$chr)
+  .args$ranges = IRanges(start = labels$start+1, end = labels$stop)
+  .args$seqinfo = seqinfo(hg19)
+  do.call(GRanges, args = .args)
+}
 
 
-#' Load ChIP training labels
-load.chip.labels <- memoise::memoise(function(tf) {
-  labels.granges(readr::read_tsv(
-    file.path(saturn.data(),
-    'ChIPseq',
-    'labels',
-    str_c(tf, '.train.labels.tsv.gz'))))
-})
+#' Read ChIP-seq labels into data frame
+read.chip.labels <- function(tf) readr::read_tsv(
+  file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz')),
+  col_types = cols(
+    chr=col_factor(seqnames(hg19)),
+    start=col_integer(),
+    stop=col_integer(),
+    .default=col_factor(c('U', 'A', 'B'))))
+
+
+#' Load ChIP training labels into GRanges
+load.chip.labels <- memoise::memoise(function(tf) labels.granges(read.chip.labels(tf)))
 
 
 #' Load expression data.
-saturn.expr <- memoise::memoise(function(cell, biorep) {
-  readr::read_tsv(file.path(saturn.data(),
-                     'RNAseq',
-                     sprintf('gene_expression.%s.biorep%d.tsv', cell, biorep)))
-})
+saturn.expr <- memoise::memoise(function(cell, biorep) readr::read_tsv(
+  file.path(saturn.data(), 'RNAseq',
+            sprintf('gene_expression.%s.biorep%d.tsv', cell, biorep)),
+  skip = 1,
+  col_names = c(
+    'gene_id',
+    'transcript_ids',
+    'length',
+    'effective_length',
+    'expected_count',
+    'TPM',
+    'FPKM'),
+  col_types = cols(
+    gene_id = col_character(),
+    transcript_ids = col_character(),
+    .default = col_double())))
 
 
 #' Combine ChIP and DNAse data
@@ -111,11 +141,24 @@ load.motif.scan <- memoise::memoise(function(
   prior.log.odds = .PRIOR.LOG.ODDS,
   maximum.BF = 10)
 {
-  motif.seqs <- readr::read_csv(seqs.path)
+  motif.seqs <- readr::read_csv(
+    seqs.path,
+    skip = 1,
+    col_names = c('length', 'ID'),
+    col_types = cols(length=col_integer(), ID = col_character()))
   readr::read_csv(
-    results.path, skip = 1, col_types = 'cciicnnn', progress = FALSE,
+    results.path, skip = 1, progress = FALSE,
     col_names = c('motif', 'w.mer', 'seq', 'position', 'strand',
-                  'Z', 'score', 'p.value')) %>%
+                  'Z', 'score', 'p.value'),
+    col_types = cols(
+      motif = col_character(),
+      w.mer = col_character(),
+      seq = col_integer(),
+      position = col_integer(),
+      strand = col_character(),
+      Z = col_double(),
+      score = col_integer(),
+      p.value = col_double())) %>%
     mutate(chr = motif.seqs$ID[seq+1],
            end = position + str_length(w.mer),
            logBF = Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF),
@@ -155,7 +198,7 @@ sparse.to.rle <- function(len, idxs, x) {
 
 #' Merge motif scan hits with GRanges
 #'
-merge.scan.hits <- function(gr, scan.hits) {
+merge.scan.hits <- function(gr, scan.hits, name='') {
   .mcols <- as.data.frame(mcols(scan.hits))
   scores <-
     as.data.frame(findOverlaps(gr, scan.hits, ignore.strand=TRUE)) %>%
@@ -163,7 +206,7 @@ merge.scan.hits <- function(gr, scan.hits) {
     summarise(
       logBF = max(.mcols$logBF[subjectHits]),
       neg.log.p = max(.mcols$neg.log.p[subjectHits]))
-  gr$rest.logBF <- with(scores, sparse.to.rle(length(gr), queryHits, logBF))
-  gr$rest.neg.log.p <- with(scores, sparse.to.rle(length(gr), queryHits, neg.log.p))
+  mcols(gr)[,str_c(name, 'logBF')]     <- with(scores, sparse.to.rle(length(gr), queryHits, logBF))
+  mcols(gr)[,str_c(name, 'neg.log.p')] <- with(scores, sparse.to.rle(length(gr), queryHits, neg.log.p))
   gr
 }
