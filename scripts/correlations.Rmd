@@ -12,6 +12,7 @@ devtools::load_all()
 rmarkdown::render('correlations.Rmd')
 ```
 
+Calculate the correlations between the DNase hypersensitivity and the binding profiles.
 ```{r}
 library(Saturn)
 training.combos <- tfs %>% filter('train' == split)
@@ -33,4 +34,35 @@ cor.cons <- training.combos %>%
 cor.relx <- training.combos %>%
   group_by(TF, cell) %>%
   do(data.frame(cor=combo.cor(., 'relaxed')))
+cors <- left_join(
+    cor.cons %>% rename(cor.cons = cor),
+    cor.relx %>% rename(cor.relx = cor)) %>%
+  mutate(cor.diff = cor.relx - cor.cons)
+sum(cors$cor.diff < 0)  # Relaxed always better
+```
+
+Plot the correlations as a heat map.
+```{r}
+ggplot(cors, aes(TF, cell)) +
+    geom_tile(aes(fill=cor.relx), colour='white') +
+    theme_tufte() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
+```
+
+Calculate simple per-cell and per-TF statistics.
+```{r}
+cor.by.cell <- cors %>%
+  group_by(cell) %>%
+  summarise(cor.mean = mean(cor.relx),
+            cor.sd = sd(cor.relx)) %>%
+  mutate(cor.sd = ifelse(is.na(cor.sd), 0, cor.sd)) %>%
+  arrange(cor.mean)
+ggplot(cor.by.cell, aes(x=cor.mean, y=cor.sd, label=cell)) + geom_text()
+cor.by.tf <- cors %>%
+  group_by(TF) %>%
+  summarise(cor.mean = mean(cor.relx),
+            cor.sd = sd(cor.relx)) %>%
+  mutate(cor.sd = ifelse(is.na(cor.sd), 0, cor.sd)) %>%
+  arrange(cor.mean)
+ggplot(cor.by.tf, aes(x=cor.mean, y=cor.sd, label=TF)) + geom_text()
 ```
