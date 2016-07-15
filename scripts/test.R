@@ -102,7 +102,7 @@ overlapping <- sort(rest.scan[queryHits(findOverlaps(rest.scan, rest.scan.overla
 example <- overlapping[205:207,]
 ov <- findOverlaps(rest.labels, example)
 regions <- unique(queryHits(ov))
-rest.scan[ov[queryHits(ov) %in% regions]@subjectHits]
+rest.scan[subjectHits(ov[queryHits(ov) %in% regions])]
 rest.labels[regions]
 
 
@@ -123,3 +123,14 @@ seqs[[1]]
 seqs[[2]]
 seqs[[3]][1:4]
 
+
+#
+# Test plotting
+library(ggbio)
+rest.hepg2.labels <- rest.labels[mcols(rest.labels)[,'HepG2'] != 'U']
+autoplot(seqinfo(rest.hepg2.labels)[chrs.levels]) +
+  layout_karyogram(rest.hepg2.labels,
+                   aes_string(fill='HepG2', color='HepG2'))
+region <- reduce(rest.labels[regions,])
+sites <- subsetByOverlaps(rest.scan, region, ignore.strand = TRUE)
+autoplot(sites, geom = "bar", alpha = .2, aes(y = logBF))

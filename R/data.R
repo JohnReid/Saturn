@@ -14,6 +14,13 @@ chrs.levels <- c(str_c('chr', 1:22), 'chrX')
 
 hg19 <- BSgenome.Hsapiens.UCSC.hg19
 
+#' Make names suitable for R.
+#'
+#' E.g. substitute '_' for '-'
+#'
+rify <- function(x) str_replace_all(x, '[-{}]', '_')
+
+
 #' The root directory of the Saturn data.
 saturn.data <- function() getOption('saturn.data',
                                     system.file('Data', package='Saturn'))
@@ -64,13 +71,17 @@ labels.granges <- function(labels) {
 
 
 #' Read ChIP-seq labels into data frame
-read.chip.labels <- function(tf) readr::read_tsv(
-  file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz')),
-  col_types = cols(
-    chr=col_factor(seqnames(hg19)),
-    start=col_integer(),
-    stop=col_integer(),
-    .default=col_factor(c('U', 'A', 'B'))))
+read.chip.labels <- function(tf) {
+  res <- readr::read_tsv(
+    file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz')),
+    col_types = cols(
+      chr=col_factor(seqnames(hg19)),
+      start=col_integer(),
+      stop=col_integer(),
+      .default=col_factor(c('U', 'A', 'B'))))
+  names(res) <- rify(names(res))
+  res
+}
 
 
 #' Load ChIP training labels into GRanges
@@ -159,7 +170,8 @@ load.motif.scan <- memoise::memoise(function(
       Z = col_double(),
       score = col_integer(),
       p.value = col_double())) %>%
-    mutate(chr = motif.seqs$ID[seq+1],
+    mutate(motif = rify(motif),
+           chr = motif.seqs$ID[seq+1],
            end = position + str_length(w.mer),
            logBF = Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF),
            neg.log.p = -log10(p.value)) %>%
