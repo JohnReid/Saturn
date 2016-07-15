@@ -35,7 +35,7 @@ sample_n(as.data.frame(ctcf.h1.hesc.peaks), 8)
 # Combine ChIP and DNAse data
 h1.hesc.dnase <- load.dnase.peaks('H1-hESC', 'conservative')
 rest.h1.hesc.dnase <- combine.chip.dnase(rest.labels, h1.hesc.dnase)
-binding <- binding.as.numeric(mcols(rest.labels)[,'H1-hESC'])
+binding <- binding.as.numeric(mcols(rest.labels)[,'H1_hESC'])
 with(rest.h1.hesc.dnase, cor(binding, dnase))
 data.frame(binding = binding,
            dnase = rest.h1.hesc.dnase$dnase) %>%
@@ -46,7 +46,7 @@ data.frame(binding = binding,
 
 #
 # Expression data
-h1.hesc.expr.1 <- saturn.expr('H1-hESC', 1)
+h1.hesc.expr.1 <- saturn.expr('H1_hESC', 1)
 names(h1.hesc.expr.1)
 dim(h1.hesc.expr.1)
 sample_n(h1.hesc.expr.1, 2)

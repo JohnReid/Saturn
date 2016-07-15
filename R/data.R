@@ -36,7 +36,7 @@ load.narrowpeak <- function(path) readr::read_tsv(
     chromEnd = col_integer(),
     name = col_character(),
     score = col_integer(),
-    strand = col_factor(c('+', '-')),
+    strand = col_character(),
     signalValue = col_double(),
     pValue = col_double(),
     qValue = col_double(),
