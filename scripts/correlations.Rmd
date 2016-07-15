@@ -13,20 +13,14 @@ rmarkdown::render('correlations.Rmd')
 ```
 
 Calculate the correlations between the DNase hypersensitivity and the binding profiles.
-```{r}
+```{r calcCors}
 library(Saturn)
 training.combos <- tfs %>% filter('train' == split)
 combo.cor <- function(row, dnase.peak.type) with(row, {
   message(TF, ' : ', cell)
-  chip.labels <- load.chip.labels(TF)
-  dnase <- load.dnase.peaks(cell, dnase.peak.type)
-  dnase <- combine.chip.dnase(chip.labels, dnase)
-  binding <- binding.as.numeric(mcols(chip.labels)[,rify(cell)])
-  data.frame(binding = binding, dnase = dnase$dnase) %>%
-    group_by(binding) %>%
-    summarise(dnase.mean = mean(dnase),
-              dnase.sd = sd(dnase))
-  with(dnase, cor(binding, dnase))
+  dnase <- summarise.dnase(cell, dnase.peak.type)
+  binding <- binding.tf.cell(TF, cell)
+  with(dnase, cor(as.integer(binding), as.vector(dnase)))
 })
 cor.cons <- training.combos %>%
   group_by(TF, cell) %>%
@@ -42,7 +36,7 @@ sum(cors$cor.diff < 0)  # Relaxed always better
 ```
 
 Plot the correlations as a heat map.
-```{r}
+```{r plotCors}
 ggplot(cors, aes(TF, cell)) +
     geom_tile(aes(fill=cor.relx), colour='white') +
     theme_tufte() +
@@ -50,7 +44,7 @@ ggplot(cors, aes(TF, cell)) +
 ```
 
 Calculate simple per-cell and per-TF statistics.
-```{r}
+```{r analyseCors}
 cor.by.cell <- cors %>%
   group_by(cell) %>%
   summarise(cor.mean = mean(cor.relx),

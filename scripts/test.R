@@ -33,12 +33,11 @@ sample_n(as.data.frame(ctcf.h1.hesc.peaks), 8)
 
 #
 # Combine ChIP and DNAse data
-h1.hesc.dnase <- load.dnase.peaks('H1-hESC', 'conservative')
-rest.h1.hesc.dnase <- combine.chip.dnase(rest.labels, h1.hesc.dnase)
-binding <- binding.as.numeric(mcols(rest.labels)[,'H1_hESC'])
-with(rest.h1.hesc.dnase, cor(binding, dnase))
+h1.hesc.dnase <- summarise.dnase('H1-hESC', 'conservative')
+binding <- binding.tf.cell('REST', 'H1_hESC')
+cor(as.vector(h1.hesc.dnase), as.integer(binding))
 data.frame(binding = binding,
-           dnase = rest.h1.hesc.dnase$dnase) %>%
+           dnase = h1.hesc.dnase) %>%
   group_by(binding) %>%
   summarise(dnase.mean = mean(dnase),
             dnase.sd = sd(dnase))
