@@ -104,22 +104,66 @@ load.dnase.peaks <- function(cell, type='conservative') {
 }
 
 #' Load motif scan results
-load.motif.scan <- memoise::memoise(function(results.path, seqs.path) {
+#'
+load.motif.scan <- memoise::memoise(function(
+  results.path,
+  seqs.path,
+  prior.log.odds = .PRIOR.LOG.ODDS,
+  maximum.BF = 10)
+{
   motif.seqs <- readr::read_csv(seqs.path)
-  with(
-    readr::read_csv(
-      results.path, skip = 1, col_types = 'cciicnnn', progress = FALSE,
-      col_names = c('motif', 'w.mer', 'seq', 'position', 'strand',
-                    'Z', 'score', 'p.value')) %>%
+  readr::read_csv(
+    results.path, skip = 1, col_types = 'cciicnnn', progress = FALSE,
+    col_names = c('motif', 'w.mer', 'seq', 'position', 'strand',
+                  'Z', 'score', 'p.value')) %>%
     mutate(chr = motif.seqs$ID[seq+1],
-           end = position + str_length(w.mer)),
+           end = position + str_length(w.mer),
+           logBF = Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF),
+           neg.log.p = -log10(p.value)) %>%
+  group_by(motif) %>%
+  do(gr = with(.,
     GRanges(
       seqnames = Rle(chr),
       ranges = IRanges(start = position+1, end = end),
       strand = strand,
       seqinfo = seqinfo(hg19),
-      motif = motif,
       Z = Z,
-      score = score,
-      p.value = p.value))
+      logBF = logBF,
+      neg.log.p = neg.log.p)))
 })
+
+
+
+
+.PRIOR <- 1e-3
+.PRIOR.LOG.ODDS <- log10(.PRIOR) - log10(1 - .PRIOR)
+#' Motif Z to log Bayes factor
+#'
+Z.to.log.BF <- function(Z, prior.log.odds = .PRIOR.LOG.ODDS, maximum = 10) {
+  ifelse(1 == Z, maximum, log10(Z) - log10(1 - Z) - prior.log.odds)
+}
+
+
+#' Construct a run-length encoded vector with zeros everywhere else than specified
+#'
+sparse.to.rle <- function(len, idxs, x) {
+  res <- Rle(0, len)
+  res[idxs] <- x
+  res
+}
+
+
+#' Merge motif scan hits with GRanges
+#'
+merge.scan.hits <- function(gr, scan.hits) {
+  .mcols <- as.data.frame(mcols(scan.hits))
+  scores <-
+    as.data.frame(findOverlaps(gr, scan.hits, ignore.strand=TRUE)) %>%
+    group_by(queryHits) %>%
+    summarise(
+      logBF = max(.mcols$logBF[subjectHits]),
+      neg.log.p = max(.mcols$neg.log.p[subjectHits]))
+  gr$rest.logBF <- with(scores, sparse.to.rle(length(gr), queryHits, logBF))
+  gr$rest.neg.log.p <- with(scores, sparse.to.rle(length(gr), queryHits, neg.log.p))
+  gr
+}

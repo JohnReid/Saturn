@@ -77,11 +77,58 @@ arid3a.labels
 
 #
 # Load motif scan results
+results.path <- file.path(saturn.data(), 'motifs', 'steme-pwm-scan.out')
+seqs.path <- file.path(saturn.data(), 'motifs', 'steme-pwm-scan.seqs')
+motif.seqs <- readr::read_csv(seqs.path)
+prior.log.odds <- .PRIOR.LOG.ODDS
+hits <- readr::read_csv(
+    results.path, skip = 1, col_types = 'cciicnnn', progress = FALSE,
+    col_names = c('motif', 'w.mer', 'seq', 'position', 'strand',
+                  'Z', 'score', 'p.value')) %>%
+  mutate(chr = motif.seqs$ID[seq+1],
+         end = position + str_length(w.mer),
+         logBF = Z.to.log.BF(Z, prior.log.odds),
+         neg.log.p = -log10(p.value))
+hits.gr <- hits %>%
+  group_by(motif) %>%
+  do(ranges = with(.,
+    GRanges(
+      seqnames = Rle(chr),
+      ranges = IRanges(start = position+1, end = end),
+      strand = strand,
+      seqinfo = seqinfo(hg19),
+      motif = motif,
+      Z = Z,
+      logBF = logBF,
+      neg.log.p = neg.log.p)))
+hits.gr[hits.gr$motif=='REST.p3',2][[1]]
+
 motif.scan <- load.motif.scan(
   file.path(saturn.data(), 'motifs', 'steme-pwm-scan.out'),
   file.path(saturn.data(), 'motifs', 'steme-pwm-scan.seqs'))
 motif.scan
-motif.scan[37373737,]
+
+#
+# Look at how REST hits overlap with ChIP-seq ranges
+#
+# Just get the REST hits
+rest.scan <- (motif.scan %>% filter('REST.p3' == motif))$gr[[1]]
+length(rest.scan)
+# Merge them
+rest.labels <- load.chip.labels('REST')
+system.time(rest.labels <- merge.scan.hits(rest.labels, rest.scan))
+
+#
+# Check overlaps
+# Calculate which REST hits overlap other REST hits
+rest.scan.reduced <- reduce(rest.scan, ignore.strand=TRUE)
+rest.scan.overlaps <- rest.scan.reduced[width(rest.scan.reduced) > 22,]
+overlapping <- sort(rest.scan[queryHits(findOverlaps(rest.scan, rest.scan.overlaps, ignore.strand=TRUE))])
+example <- overlapping[205:207,]
+regions <- unique(queryHits(findOverlaps(myc.labels, example)))
+rest.scan[ov[queryHits(ov) %in% regions]@subjectHits]
+myc.labels[regions]
+myc.logBF[regions]
 
 
 #
