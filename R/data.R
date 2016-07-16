@@ -28,7 +28,7 @@ saturn.data <- function() getOption('saturn.data',
 
 #' Load a narrowPeak file.
 load.narrowpeak <- function(path) readr::read_tsv(
-  path,
+  path, progress = FALSE,
   col_names = .NARROWPEAK.COLS,
   col_types = cols(
     chrom = col_factor(seqnames(hg19)),
@@ -73,7 +73,7 @@ labels.granges <- function(labels) {
 #' Read ChIP-seq labels into data frame
 read.chip.labels <- function(tf) {
   res <- readr::read_tsv(
-    file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz')),
+    file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz')), progress = FALSE,
     col_types = cols(
       chr=col_factor(seqnames(hg19)),
       start=col_integer(),
@@ -92,7 +92,7 @@ load.chip.labels <- memoise::memoise(function(tf) labels.granges(read.chip.label
 saturn.expr <- memoise::memoise(function(cell, biorep) readr::read_tsv(
   file.path(saturn.data(), 'RNAseq',
             sprintf('gene_expression.%s.biorep%d.tsv', cell, biorep)),
-  skip = 1,
+  skip = 1, progress = FALSE,
   col_names = c(
     'gene_id',
     'transcript_ids',
@@ -173,8 +173,7 @@ load.motif.scan <- memoise::memoise(function(
   maximum.BF = 10)
 {
   motif.seqs <- readr::read_csv(
-    seqs.path,
-    skip = 1,
+    seqs.path, skip = 1, progress = FALSE,
     col_names = c('length', 'ID'),
     col_types = cols(length=col_integer(), ID = col_character()))
   readr::read_csv(

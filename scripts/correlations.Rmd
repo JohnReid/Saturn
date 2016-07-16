@@ -4,7 +4,7 @@ author: John Reid
 output: pdf_document
 ---
 
-```{r eval = FALSE, echo = FALSE}
+```{r render, eval = FALSE, echo = FALSE}
 #
 # Execute this block to render this document.
 #
@@ -13,8 +13,9 @@ rmarkdown::render('correlations.Rmd')
 ```
 
 Calculate the correlations between the DNase hypersensitivity and the binding profiles.
-```{r calcCors}
+```{r calcCors, message=FALSE}
 library(Saturn)
+options(dplyr.show_progress = FALSE)
 training.combos <- tfs %>% filter('train' == split)
 combo.cor <- function(row, dnase.peak.type) with(row, {
   message(TF, ' : ', cell)
