@@ -1,0 +1,27 @@
+---
+title: "Motifs"
+author: John Reid
+output: pdf_document
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('motifs.Rmd')
+```
+
+Load the TF-motif associations.
+```{r TF.motif}
+library(Saturn)
+tfs
+sapply(tfs, class)
+tf.motifs <-
+    readr::read_csv(file.path(saturn.data(), 'motifs', 'tf-motifs.csv')) %>%
+    mutate(TF=factor(TF, levels=levels(tfs$TF)),
+           motif=factor(motif))
+sapply(tf.motifs, class)
+tf.motifs[str_detect(tf.motifs$motif, ','),]
+# devtools::use_data(tf.motifs, overwrite = TRUE)
+```

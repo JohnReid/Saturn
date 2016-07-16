@@ -95,4 +95,4 @@ fout = open(sys.argv[2], 'w')
 fout.write('TF,motif\n')
 for tf, motifs in tf_motifs.iteritems():
     for motif in motifs:
-        fout.write('{},{}\n'.format(tf, motif))
+        fout.write('"{}","{}"\n'.format(tf, motif))
