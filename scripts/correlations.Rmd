@@ -1,5 +1,5 @@
 ---
-title: "DNase - binding correlations"
+title: "Binding correlations with DNase and motifs"
 author: John Reid
 output: pdf_document
 ---
@@ -12,8 +12,10 @@ devtools::load_all()
 rmarkdown::render('correlations.Rmd')
 ```
 
+# DNse - binding correlations
+
 Calculate the correlations between the DNase hypersensitivity and the binding profiles.
-```{r calcCors, message=FALSE}
+```{r calcDNase, message = FALSE, eval = FALSE}
 library(Saturn)
 options(dplyr.show_progress = FALSE)
 training.combos <- tfs %>% filter('train' == split)
@@ -23,41 +25,91 @@ combo.cor <- function(row, dnase.peak.type) with(row, {
   binding <- binding.tf.cell(TF, rify(cell))
   with(dnase, cor(as.integer(binding), as.vector(dnase)))
 })
-cor.cons <- training.combos %>%
+cor.dnase.cons <- training.combos %>%
   group_by(TF, cell) %>%
   do(data.frame(cor=combo.cor(., 'conservative')))
-cor.relx <- training.combos %>%
+cor.dnase.relx <- training.combos %>%
   group_by(TF, cell) %>%
   do(data.frame(cor=combo.cor(., 'relaxed')))
-cors <- left_join(
-    cor.cons %>% rename(cor.cons = cor),
-    cor.relx %>% rename(cor.relx = cor)) %>%
-  mutate(cor.diff = cor.relx - cor.cons)
-sum(cors$cor.diff < 0)  # Relaxed always better
+cors.dnase <- left_join(
+    cor.dnase.cons %>% rename(cor.dnase.cons = cor),
+    cor.dnase.relx %>% rename(cor.dnase.relx = cor)) %>%
+  mutate(cor.diff = cor.dnase.relx - cor.dnase.cons)
+sum(cors.dnase$cor.diff < 0)  # Relaxed always better
 ```
 
 Plot the correlations as a heat map.
 ```{r plotCors}
-ggplot(cors, aes(TF, cell)) +
-    geom_tile(aes(fill=cor.relx), colour='white') +
+ggplot(cors.dnase, aes(TF, cell)) +
+    geom_tile(aes(fill=cor.dnase.relx), colour='white') +
     theme_tufte() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
 ```
 
 Calculate simple per-cell and per-TF statistics.
 ```{r analyseCors}
-cor.by.cell <- cors %>%
+cor.by.cell <- cors.dnase %>%
   group_by(cell) %>%
-  summarise(cor.mean = mean(cor.relx),
-            cor.sd = sd(cor.relx)) %>%
+  summarise(cor.mean = mean(cor.dnase.relx),
+            cor.sd = sd(cor.dnase.relx)) %>%
   mutate(cor.sd = ifelse(is.na(cor.sd), 0, cor.sd)) %>%
   arrange(cor.mean)
 ggplot(cor.by.cell, aes(x=cor.mean, y=cor.sd, label=cell)) + geom_text()
-cor.by.tf <- cors %>%
+cor.by.tf <- cors.dnase %>%
   group_by(TF) %>%
-  summarise(cor.mean = mean(cor.relx),
-            cor.sd = sd(cor.relx)) %>%
+  summarise(cor.mean = mean(cor.dnase.relx),
+            cor.sd = sd(cor.dnase.relx)) %>%
   mutate(cor.sd = ifelse(is.na(cor.sd), 0, cor.sd)) %>%
   arrange(cor.mean)
 ggplot(cor.by.tf, aes(x=cor.mean, y=cor.sd, label=TF)) + geom_text()
+```
+
+# Motif - binding correlations
+
+Load motif scan
+```{r loadMotif}
+results.path <- file.path(saturn.data(), 'motifs', 'steme-pwm-scan.out')
+seqs.path <- file.path(saturn.data(), 'motifs', 'steme-pwm-scan.seqs')
+motif.scan <- load.motif.scan(results.path, seqs.path)
+motif.scan
+object.size(motif.scan)
+```
+
+Prepare motif scores to calculate correlations with binding.
+```{r calcMotif}
+merge.row <- function(row) with(row, {
+  merge <- summarise.scan.hits(load.chip.labels(TF), gr)
+  names(merge) <- str_c(rify(motif), '.', names(merge))
+  merge
+})
+tf.motif.ranges <- tf.motifs %>% left_join(motif.scan)
+# .df <- tf.motif.ranges %>% head(4)
+.df <- tf.motif.ranges
+merged <-
+  .df %>%
+  rowwise() %>%
+  do(hits = merge.row(.)) %>%
+  ungroup() %>%
+  mutate(TF = .df$TF, motif=.df$motif)
+merged
+scan.summarised <- unlist(merged$hits)
+motif.cors <-
+  training.combos %>%
+  # filter('YY1' == TF) %>%
+  left_join(tf.motifs) %>%
+  rowwise() %>%
+  summarise(
+    cor = cor(scan.summarised[[str_c(motif, '.logBF')]],
+              binding.tf.cell(TF, rify(cell))))
+
+load.chip.labels('YY1')
+binding.tf.cell('YY1', 'GM12878')
+binding.tf.cell('YY1', 'H1_hESC')
+binding.tf.cell('YY1', 'HepG2')
+binding.tf.cell('YY1', 'SK_N_SH')
+yy1.binding <- binding.tf.cell('YY1', 'H1_hESC')
+class(yy1.binding)
+yy1.full.hits <- scan.summarised[['YY1_full.logBF']]
+class(yy1.full.hits)
+system.time(.cor <- cor(yy1.binding, yy1.full.hits))
 ```
