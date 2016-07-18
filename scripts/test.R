@@ -99,7 +99,7 @@ rest.scan <- (motif.scan %>% filter('REST.p3' == motif))$gr[[1]]
 length(rest.scan)
 # Merge them
 rest.labels <- load.chip.labels('REST')
-system.time(rest.labels <- merge.scan.hits(rest.labels, rest.scan))
+system.time(rest.labels <- summarise.scan.hits(rest.labels, rest.scan))
 
 #
 # Check overlaps
