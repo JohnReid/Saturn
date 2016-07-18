@@ -220,16 +220,39 @@ Z.to.log.BF <- function(Z, prior.log.odds = .PRIOR.LOG.ODDS, maximum = 10) {
 
 #' Construct a run-length encoded vector with zeros everywhere else than specified
 #'
+#' DEPRECATED: Rle.from.sparse is much more efficient.
+#'
 sparse.to.rle <- function(len, idxs, x) {
+  warning("This function (sparse.to.rle) has been deprecated. Rle.from.sparse is much more efficient.")
   res <- Rle(0, len)
   res[idxs] <- x
   res
 }
 
 
-#' Merge motif scan hits with GRanges
+#' Construct a run-length encoded vector with zeros everywhere else than specified
 #'
-merge.scan.hits <- function(gr, scan.hits, name='') {
+Rle.from.sparse <- function(len, idxs, x) {
+  N <- length(idxs)
+  .vals <- rep(0, 2*N+1)
+  .lens <- rep(1, 2*N+1)
+  .idxs.ext <- c(0, .idxs, len+1)
+  .idxs.ext[1:10]
+  zero.lens <- .idxs.ext[2:(N+2)] - .idxs.ext[1:(N+1)] - 1
+  zero.lens[1:10]
+  zero.idxs <- seq.int(1, 2*N+1, 2)
+  length(zero.idxs)
+  length(zero.lens)
+  .lens[zero.idxs] <- zero.lens
+  .vals[seq.int(2, 2*N,   2)] <- x
+  non.zero.lens <- .lens != 0
+  Rle(.vals[non.zero.lens], .lens[non.zero.lens])
+}
+
+
+#' Summarise motif scan hits on GRanges
+#'
+summarise.scan.hits <- function(gr, scan.hits, name='') {
   .mcols <- as.data.frame(mcols(scan.hits))
   scores <-
     as.data.frame(findOverlaps(gr, scan.hits, ignore.strand=TRUE)) %>%
@@ -237,7 +260,9 @@ merge.scan.hits <- function(gr, scan.hits, name='') {
     summarise(
       logBF = max(.mcols$logBF[subjectHits]),
       neg.log.p = max(.mcols$neg.log.p[subjectHits]))
-  mcols(gr)[,str_c(name, 'logBF')]     <- with(scores, sparse.to.rle(length(gr), queryHits, logBF))
-  mcols(gr)[,str_c(name, 'neg.log.p')] <- with(scores, sparse.to.rle(length(gr), queryHits, neg.log.p))
-  gr
+  with(
+    scores,
+    data.frame(
+      logBF     = Rle.from.sparse(length(gr), queryHits, logBF),
+      neg.log.p = Rle.from.sparse(length(gr), queryHits, neg.log.p)))
 }
