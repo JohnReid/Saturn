@@ -27,21 +27,23 @@ saturn.data <- function() getOption('saturn.data',
 
 
 #' Load a narrowPeak file.
-load.narrowpeak <- function(path) readr::read_tsv(
-  path, progress = FALSE,
-  col_names = .NARROWPEAK.COLS,
-  col_types = cols(
-    chrom = col_factor(seqnames(hg19)),
-    chromStart = col_integer(),
-    chromEnd = col_integer(),
-    name = col_character(),
-    score = col_integer(),
-    strand = col_character(),
-    signalValue = col_double(),
-    pValue = col_double(),
-    qValue = col_double(),
-    peak = col_integer()))
-
+load.narrowpeak <- function(path) {
+  message('Loading: ', path)
+  readr::read_tsv(
+    path, progress = FALSE,
+    col_names = .NARROWPEAK.COLS,
+    col_types = cols(
+      chrom = col_factor(seqnames(hg19)),
+      chromStart = col_integer(),
+      chromEnd = col_integer(),
+      name = col_character(),
+      score = col_integer(),
+      strand = col_character(),
+      signalValue = col_double(),
+      pValue = col_double(),
+      qValue = col_double(),
+      peak = col_integer()))
+}
 
 #' Convert a narrowPeak data frame to GRanges.
 narrowpeak.granges <- function(narrowpeak) with(narrowpeak,
@@ -62,7 +64,7 @@ binding.as.numeric <- function(binding) ifelse('B' == binding, 1, ifelse('A' == 
 #' Convert a ChIP-seq labels data frame to GRanges.
 labels.granges <- function(labels) {
   mcol.names <- names(labels)[4:ncol(labels)]
-  .args = lapply(labels[,mcol.names], Rle)
+  .args = lapply(labels[,mcol.names], function(x) Rle(as.integer(x)))
   .args$seqnames = Rle(labels$chr)
   .args$ranges = IRanges(start = labels$start+1, end = labels$stop)
   .args$seqinfo = seqinfo(hg19)
@@ -72,8 +74,10 @@ labels.granges <- function(labels) {
 
 #' Read ChIP-seq labels into data frame
 read.chip.labels <- function(tf) {
+  path <- file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz'))
+  message('Loading: ', path)
   res <- readr::read_tsv(
-    file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz')), progress = FALSE,
+    path, progress = FALSE,
     col_types = cols(
       chr=col_factor(seqnames(hg19)),
       start=col_integer(),
@@ -89,25 +93,29 @@ load.chip.labels <- memoise::memoise(function(tf) labels.granges(read.chip.label
 
 
 #' Load expression data.
-saturn.expr <- memoise::memoise(function(cell, biorep) readr::read_tsv(
-  file.path(saturn.data(), 'RNAseq',
-            sprintf('gene_expression.%s.biorep%d.tsv', cell, biorep)),
-  skip = 1, progress = FALSE,
-  col_names = c(
-    'gene_id',
-    'transcript_ids',
-    'length',
-    'effective_length',
-    'expected_count',
-    'TPM',
-    'FPKM'),
-  col_types = cols(
-    gene_id = col_character(),
-    transcript_ids = col_character(),
-    .default = col_double())))
-
+saturn.expr <- memoise::memoise(function(cell, biorep) {
+  path <- file.path(
+    saturn.data(), 'RNAseq',
+    sprintf('gene_expression.%s.biorep%d.tsv', cell, biorep))
+  message('Loading: ', path)
+  readr::read_tsv(
+    path, skip = 1, progress = FALSE,
+    col_names = c(
+      'gene_id',
+      'transcript_ids',
+      'length',
+      'effective_length',
+      'expected_count',
+      'TPM',
+      'FPKM'),
+    col_types = cols(
+      gene_id = col_character(),
+      transcript_ids = col_character(),
+      .default = col_double()))
+})
 
 #' Combine ChIP and DNAse data
+#'
 combine.chip.dnase <- function(chip.labels, dnase) {
   # Find the overlaps between the DNAse data and the ChIP labels
   overlaps <- as.data.frame(findOverlaps(dnase, chip.labels))
@@ -162,7 +170,7 @@ summarise.dnase <- memoise::memoise(function(cell, type='conservative') {
 
 #' Binding for TF/cell type combination
 #'
-binding.tf.cell <- memoise::memoise(function(tf, cell) mcols(load.chip.labels(tf))[,cell])
+binding.tf.cell <- memoise::memoise(function(tf, cell) mcols(load.chip.labels(tf))[,rify(cell)])
 
 #' Load motif scan results
 #'
@@ -176,6 +184,7 @@ load.motif.scan <- memoise::memoise(function(
     seqs.path, skip = 1, progress = FALSE,
     col_names = c('length', 'ID'),
     col_types = cols(length=col_integer(), ID = col_character()))
+  message('Loading: ', results.path)
   readr::read_csv(
     results.path, skip = 1, progress = FALSE,
     col_names = c('motif', 'w.mer', 'seq', 'position', 'strand',
@@ -262,17 +271,21 @@ Rle.from.sparse <- function(len, idxs, x) {
 
 #' Summarise motif scan hits on GRanges
 #'
-summarise.scan.hits <- function(gr, scan.hits, name='') {
-  .mcols <- as.data.frame(mcols(scan.hits))
-  scores <-
-    as.data.frame(findOverlaps(gr, scan.hits, ignore.strand=TRUE)) %>%
-    group_by(queryHits) %>%
-    summarise(
-      logBF = max(.mcols$logBF[subjectHits]),
-      neg.log.p = max(.mcols$neg.log.p[subjectHits]))
+summarise.scan.hits <- function(gr, scan.hits) {
+  # Get the scores as Rle by range
   with(
-    scores,
-    data.frame(
+    # Find the overlaps between the GRanges and the scan hits
+    as.data.frame(findOverlaps(gr, scan.hits, ignore.strand=TRUE)) %>%
+      # Attach the scores to the overlaps
+      mutate(
+        logBF     = scan.hits$logBF[subjectHits],
+        neg.log.p = scan.hits$neg.log.p[subjectHits]) %>%
+      # Group by range
+      group_by(queryHits) %>%
+      # Summarise by maximum scores
+      summarise(logBF = max(logBF), neg.log.p = max(neg.log.p)),
+    # Return a list of scores
+    list(
       logBF     = Rle.from.sparse(length(gr), queryHits, logBF),
       neg.log.p = Rle.from.sparse(length(gr), queryHits, neg.log.p)))
 }
