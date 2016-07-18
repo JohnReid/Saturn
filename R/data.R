@@ -233,20 +233,30 @@ sparse.to.rle <- function(len, idxs, x) {
 #' Construct a run-length encoded vector with zeros everywhere else than specified
 #'
 Rle.from.sparse <- function(len, idxs, x) {
+  # The number of non-zero entries
   N <- length(idxs)
+  # Check the indexes are sorted
+  stopifnot(N < 2 || all(idxs[1:(N-1)] < idxs[2:N]))
+  # Will store the values (including the zeros)
   .vals <- rep(0, 2*N+1)
+  # Will store the lengths (for the zeros and non-zeros)
   .lens <- rep(1, 2*N+1)
-  .idxs.ext <- c(0, .idxs, len+1)
-  .idxs.ext[1:10]
+  # Extend the non-zero indices to beginning and end of range
+  .idxs.ext <- c(0, idxs, len+1)
+  # Calculate the length of the zero runs
   zero.lens <- .idxs.ext[2:(N+2)] - .idxs.ext[1:(N+1)] - 1
-  zero.lens[1:10]
+  # Where are the zeros in the .vals and .lens vector?
   zero.idxs <- seq.int(1, 2*N+1, 2)
-  length(zero.idxs)
-  length(zero.lens)
+  # Set the lengths of the zeros
   .lens[zero.idxs] <- zero.lens
-  .vals[seq.int(2, 2*N,   2)] <- x
-  non.zero.lens <- .lens != 0
-  Rle(.vals[non.zero.lens], .lens[non.zero.lens])
+  # Where are the non-zeros in the .vals and .lens vector?
+  non.zero.idxs <- seq.int(2, 2*N,   2)
+  # Set the non-zero values
+  .vals[non.zero.idxs] <- x
+  # Which lengths are positive?
+  pos.lens <- .lens > 0
+  # Some of the lengths will be zero, ignore them and their values
+  Rle(.vals[pos.lens], .lens[pos.lens])
 }
 
 
