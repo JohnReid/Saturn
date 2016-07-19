@@ -18,6 +18,7 @@ from keras import backend as K
 from Bio import SeqIO
 import pyBigWig
 import gzip
+import pandas as pd
 
 # set parameters:
 # max_features = 5000
@@ -88,37 +89,56 @@ def baseasint(b):
         return 3
     if 'N' == b:
         return 4
+    raise(ValueError('Bad base "{}" given'.format(b)))
 
 def encodesequence(seq):
     "Encode a sequence as integers."
-    return numpy.fromiter(map(baseasint, seq.upper()), np.int8, len(seq))
+    return np.fromiter(map(baseasint, seq.upper()), np.int8, len(seq))
 
 # Load genome
 genomefasta = '../Data/annotations/hg19.genome.fa.gz'
 genome = {}
-with gzip.open(genomefasta) as handle:
-    for record in SeqIO.parse(handle, "fasta"):
-        genome[record.id] = encodesequence(record.seq)
+for record in SeqIO.parse(gzip.open(genomefasta, mode='rt'), "fasta"):
+    print(record.id)
+    genome[record.id] = encodesequence(record.seq)
 genome
 
 # Load bigwig
-bw = pyBigWig.open("../Data/DNASE/fold_coverage_wiggles/DNASE.H1-hESC.fc.signal.bigwig")
-bw.chroms()
-bw.header()
+dnase = pyBigWig.open("../Data/DNASE/fold_coverage_wiggles/DNASE.H1-hESC.fc.signal.bigwig")
+dnase.chroms()
+dnase.header()
 # Mean value in range
-bw.stats("chr1", 1000000, 1003000)
+dnase.stats("chr1", 1000000, 1003000)
 # Max value in range
-bw.stats("chr1", 1000000, 1003000, type="max")
+dnase.stats("chr1", 1000000, 1003000, type="max")
 # Max value in chromosome
-bw.stats("chr1", type="max")
+dnase.stats("chr1", type="max")
 # All values in range
-bw.values("chr1", 1000000, 1003000)
-bw.values("chr1", 1000000, 1000030)
-bw.values("chr1", 0, 3)
+dnase.values("chr1", 1000000, 1003000)
+dnase.values("chr1", 1000000, 1000030)
+dnase.values("chr1", 0, 3)
 
-# Load binding data
-import pandas as pd
-binding = pd.read_table('../Data/ChIPseq/labels/CTCF.train.labels.tsv.gz')
+# Load ChIP data
+chip = pd.read_table('../Data/ChIPseq/labels/CTCF.train.labels.tsv.gz')
+state = 'B'
+cell = 'H1-hESC'
+num_sample = 10
+def samplebound(chip, state, cell, num_sample):
+    "Sample rows from chip data which match the cell's state"
+    idxs = np.argwhere(state == chip[cell])[:,0]
+    sampledidxs = np.random.choice(idxs, size=num_sample, replace=False)
+    sampledidxs
+    return chip.iloc[sampledidxs]
+bound = samplebound(chip, state, cell, num_sample)
+bound
+
+# Munge data
+def dataforregion(chrom, start, stop):
+    data = np.empty((200, nb_bases + 1))
+    data[:,0:nb_bases] = genome[chrom][start:stop]
+    data[:,nb_bases] = dnase.values(chrom, start, stop)
+    return data
+dataforregion('chr1')
 
 # Fit model
 model.fit(X_train, y_train,
