@@ -5,5 +5,5 @@ virtualenv \
     --prompt="DREAM:py3:" \
     --python=python3 \
     virtualenv-py3
-. virtualenv/bin/activate
-pip3 install -r reqd-pkgs-py3.txt
+. virtualenv-py3/bin/activate
+pip3 install -r reqd-pkgs.txt
