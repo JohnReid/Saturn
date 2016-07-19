@@ -20,12 +20,13 @@ import pyBigWig
 import gzip
 import pandas as pd
 import pickle
+import os
 
 # set parameters:
 # max_features = 5000
 region_size = 200
 batch_size = 32  # was max_len
-nb_bases = 5  # Include 'N'
+nb_bases = 4
 # embedding_dims = 50
 nb_filter = 30
 filter_length = 3
@@ -33,38 +34,22 @@ hidden_dims = 250
 nb_epoch = 2
 # We have 5 inputs for each base and one for the DNase information
 input_shape = (region_size, nb_bases + 1)
+cell = 'H1-hESC'
+num_sample = 10000
+percenttrain = .9
 
-print('Build model...')
-model = Sequential()
-
-# we add a Convolution1D, which will learn nb_filter
-# word group filters of size filter_length:
-model.add(Convolution1D(input_shape=input_shape,
-                        nb_filter=nb_filter,
-                        filter_length=filter_length,
-                        border_mode='valid',
-                        activation='relu',
-                        subsample_length=1))
+BASECODE = np.array(
+    ((1, 0, 0, 0),  # A
+     (0, 1, 0, 0),  # G
+     (0, 0, 1, 0),  # C
+     (0, 0, 0, 1),  # T
+     (0, 0, 0, 0)), # N
+    dtype=np.float)
 
 # we use max over time pooling by defining a python function to use
 # in a Lambda layer
 def max_1d(X):
     return K.max(X, axis=1)
-
-model.add(Lambda(max_1d, output_shape=(nb_filter,)))
-
-# We add a vanilla hidden layer:
-model.add(Dense(hidden_dims))
-model.add(Dropout(0.2))
-model.add(Activation('relu'))
-
-# We project onto a single unit output layer, and squash it with a sigmoid:
-model.add(Dense(1))
-model.add(Activation('sigmoid'))
-
-model.compile(loss='binary_crossentropy',
-              optimizer='adam',
-              metrics=['accuracy'])
 
 def baseasint(b):
     "Encode bases as integers."
@@ -84,6 +69,23 @@ def encodesequence(seq):
     "Encode a sequence as integers."
     return np.fromiter(map(baseasint, seq.upper()), np.int8, len(seq))
 
+def samplebound(chip, state, cell, num_sample):
+    "Sample rows from chip data which match the cell's state"
+    idxs = np.argwhere(state == chip[cell])[:,0]
+    sampledidxs = np.random.choice(idxs, size=num_sample, replace=False)
+    sampledidxs
+    return chip.iloc[sampledidxs]
+
+def encodebases(bases):
+    """Encode bases as a 4-d vector."""
+    return np.take(a=BASECODE, indices=bases, axis=0)
+
+def dataforregion(chrom, start, stop):
+    data = np.empty((200, nb_bases + 1))
+    data[:,0:nb_bases] = encodebases(genome[chrom][start:stop])
+    data[:,nb_bases] = dnase.values(chrom, start, stop)
+    return data
+
 # Load genome from saved numpy data structure or FASTA otherwise
 genomenpz = 'data/hg19.npz'
 if os.path.exists(genomenpz):
@@ -100,7 +102,7 @@ else:
     np.savez(genomenpz, **genome)
 
 # Load bigwig
-dnase = pyBigWig.open("../Data/DNASE/fold_coverage_wiggles/DNASE.H1-hESC.fc.signal.bigwig")
+dnase = pyBigWig.open("../Data/DNASE/fold_coverage_wiggles/DNASE.{}.fc.signal.bigwig".format(cell))
 dnase.chroms()
 dnase.header()
 # Mean value in range
@@ -116,42 +118,56 @@ dnase.values("chr1", 0, 3)
 
 # Load ChIP data
 chip = pd.read_table('../Data/ChIPseq/labels/CTCF.train.labels.tsv.gz')
-state = 'B'
-cell = 'H1-hESC'
-num_sample = 10
-def samplebound(chip, state, cell, num_sample):
-    "Sample rows from chip data which match the cell's state"
-    idxs = np.argwhere(state == chip[cell])[:,0]
-    sampledidxs = np.random.choice(idxs, size=num_sample, replace=False)
-    sampledidxs
-    return chip.iloc[sampledidxs]
-bound = samplebound(chip, state, cell, num_sample)
-bound
+
+
+print('Build model...')
+model = Sequential()
+
+# we add a Convolution1D, which will learn nb_filter
+# word group filters of size filter_length:
+model.add(Convolution1D(input_shape=input_shape,
+                        nb_filter=nb_filter,
+                        filter_length=filter_length,
+                        border_mode='valid',
+                        activation='relu',
+                        subsample_length=1))
+
+model.add(Lambda(max_1d, output_shape=(nb_filter,)))
+
+# We add a vanilla hidden layer:
+model.add(Dense(hidden_dims))
+model.add(Dropout(0.2))
+model.add(Activation('relu'))
+
+# We project onto a single unit output layer, and squash it with a sigmoid:
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+
+model.compile(loss='binary_crossentropy',
+              optimizer='adam',
+              metrics=['accuracy'])
+
+# Sample bound and unbound regions for training and validation
+bound   = samplebound(chip, 'B', cell, int(num_sample/2))
+unbound = samplebound(chip, 'U', cell, num_sample - int(num_sample/2))
+samples = bound.append(unbound)
 
 # Munge data
-BASECODE = np.array(
-    ((1, 0, 0, 0),  # A
-     (0, 1, 0, 0),  # G
-     (0, 0, 1, 0),  # C
-     (0, 0, 0, 1),  # T
-     (0, 0, 0, 0)), # N
-    dtype=np.float)
-def encodebases(bases):
-    """Encode bases as a 4-d vector."""
-    return np.take(a=BASECODE, indices=bases, axis=0)
-encodebases([0,1,2,2,3,4])
-tmp = encodebases(genome['chr20'])
-tmp[1000000:1000100]
-
-def dataforregion(chrom, start, stop):
-    data = np.empty((200, nb_bases + 1))
-    data[:,0:nb_bases] = genome[chrom][start:stop]
-    data[:,nb_bases] = dnase.values(chrom, start, stop)
-    return data
-dataforregion('chr1')
+X = np.array([
+    dataforregion(row['chr'], row['start'], row['stop'])
+    for index, row in samples.iterrows()
+])
+Y = np.array('B' == samples[cell], dtype=int)
+perm = np.random.permutation(samples.shape[0])
+trainsize = int(samples.shape[0] * percenttrain)
+Xtrain = X[perm[:trainsize]]
+Ytrain = Y[perm[:trainsize]]
+Xtest = X[perm[trainsize:]]
+Ytest = Y[perm[trainsize:]]
+Xtrain
 
 # Fit model
-model.fit(X_train, y_train,
+model.fit(Xtrain, Ytrain,
           batch_size=batch_size,
           nb_epoch=nb_epoch,
-          validation_data=(X_test, y_test))
+          validation_data=(Xtest, Ytest))
