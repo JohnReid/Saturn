@@ -4,7 +4,6 @@
 '''
 
 from __future__ import print_function
-import numpy as np
 np.random.seed(1337)  # for reproducibility
 
 from keras.preprocessing import sequence
@@ -15,10 +14,12 @@ from keras.layers import Convolution1D
 from keras.datasets import imdb
 from keras import backend as K
 
+import numpy as np
 from Bio import SeqIO
 import pyBigWig
 import gzip
 import pandas as pd
+import pickle
 
 # set parameters:
 # max_features = 5000
@@ -30,16 +31,16 @@ nb_filter = 30
 filter_length = 3
 hidden_dims = 250
 nb_epoch = 2
+# We have 5 inputs for each base and one for the DNase information
+input_shape = (region_size, nb_bases + 1)
 
 print('Build model...')
 model = Sequential()
 
-# We have 5 inputs for each base and one for the DNase information
-model.add(Dense(nb_bases + 1, input_shape=(region_size,)))
-
 # we add a Convolution1D, which will learn nb_filter
 # word group filters of size filter_length:
-model.add(Convolution1D(nb_filter=nb_filter,
+model.add(Convolution1D(input_shape=input_shape,
+                        nb_filter=nb_filter,
                         filter_length=filter_length,
                         border_mode='valid',
                         activation='relu',
@@ -83,13 +84,20 @@ def encodesequence(seq):
     "Encode a sequence as integers."
     return np.fromiter(map(baseasint, seq.upper()), np.int8, len(seq))
 
-# Load genome
-genomefasta = '../Data/annotations/hg19.genome.fa.gz'
-genome = {}
-for record in SeqIO.parse(gzip.open(genomefasta, mode='rt'), "fasta"):
-    print(record.id)
-    genome[record.id] = encodesequence(record.seq)
-genome
+# Load genome from saved numpy data structure or FASTA otherwise
+genomenpz = 'data/hg19.npz'
+if os.path.exists(genomenpz):
+    genome = dict(np.load(genomenpz).iteritems())
+    # sum(map(len, genome.values()))
+else:
+    genomefasta = '../Data/annotations/hg19.genome.fa.gz'
+    genome = {}
+    for record in SeqIO.parse(gzip.open(genomefasta, mode='rt'), "fasta"):
+        print('Loaded: {}'.format(record.id))
+        genome[record.id] = encodesequence(record.seq)
+    # sum(map(len, genome.values()))
+    # Save numpy genome
+    np.savez(genomenpz, **genome)
 
 # Load bigwig
 dnase = pyBigWig.open("../Data/DNASE/fold_coverage_wiggles/DNASE.H1-hESC.fc.signal.bigwig")
@@ -121,6 +129,20 @@ bound = samplebound(chip, state, cell, num_sample)
 bound
 
 # Munge data
+BASECODE = np.array(
+    ((1, 0, 0, 0),  # A
+     (0, 1, 0, 0),  # G
+     (0, 0, 1, 0),  # C
+     (0, 0, 0, 1),  # T
+     (0, 0, 0, 0)), # N
+    dtype=np.float)
+def encodebases(bases):
+    """Encode bases as a 4-d vector."""
+    return np.take(a=BASECODE, indices=bases, axis=0)
+encodebases([0,1,2,2,3,4])
+tmp = encodebases(genome['chr20'])
+tmp[1000000:1000100]
+
 def dataforregion(chrom, start, stop):
     data = np.empty((200, nb_bases + 1))
     data[:,0:nb_bases] = genome[chrom][start:stop]
