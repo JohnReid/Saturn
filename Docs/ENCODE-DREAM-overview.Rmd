@@ -205,3 +205,42 @@ The major difficulties are that
 
 
 
+## Cell types
+
+```{r cellTypes}
+'cell	lineage	tissue	karyotype	sex	description
+GM12878	mesoderm 	blood 	normal 	F 	B-lymphocyte, lymphoblastoid, International HapMap Project - CEPH/Utah - European Caucasion, Epstein-Barr Virus
+H1-hESC	inner cell mass 	embryonic stem cell 	normal 	M	embryonic stem cells
+K562	mesoderm 	blood 	cancer 	F	leukemia, "The continuous cell line K-562 was established by Lozzio and Lozzio from the pleural effusion of a 53-year-old female with chronic myelogenous leukemia in terminal blast crises." - ATCC
+Panc1		pancreas	cancer	M	pancreatic carcinoma, (PMID: 1140870) PANC-1 was established from a pancreatic carcinoma, which was extracted via pancreatico-duodenectomy specimen from a 56-year-old Caucasian individual. Malignancy of this cell line was verified via in vitro and in vivo assays.
+IMR90	endoderm 	lung 	normal 	F	fetal lung fibroblasts, newly promoted to tier 2: not in 2011 analysis
+PC-3		prostate	cancer	M	prostate cancer cell line
+A549 	2 	epithelial cell line derived from a lung carcinoma tissue. (PMID: 175022), "This line was initiated in 1972 by D.J. Giard, et al. through explant culture of lung carcinomatous tissue from a 58-year-old caucasian male." - ATCC, newly promoted to tier 2: not in 2011 analysis 	endoderm 	epithelium 	cancer 	M 	Myers
+Crawford
+Stam   	ATCC CCL-185 	BTO:0000018 	A549
+CD20+ 	2 	B cells from donors RO01778 and RO01794, newly promoted to tier 2: not in 2011 analysis 	mesoderm 	blood 	normal 	F 	Stam   	Dr. Heimfeld Lab at FHCRC CD20+ 	BTO:0000776 	B-cells CD20+
+CD20+_RO01778 	2 	B cells, caucasian, draw number 1, newly promoted to tier 2: not in 2011 analysis 	mesoderm 	blood 	normal 	F 	Stam   	Rajinder Kaul, UW CD20+_RO01778 	BTO:0000776 	B-cells CD20+ (RO01778)
+CD20+_RO01794 	2 	B cells, African American, draw number 1, newly promoted to tier 2: not in 2011 analysis 	mesoderm 	blood 	normal 	F 	Stam   	Rajinder Kaul, UW CD20+_RO01794 	BTO:0000776 	B cells CD20+ RO01794
+H1-neurons 	2 	neurons derived from H1 embryonic stem cells, newly promoted to tier 2: not in 2011 analysis 	ectoderm 	neurons 	normal 	M 	Cellular Dynamics International Batch 1
+Cellular Dynamics International Batch 2   	CDI TBD 	BTO:0000938 	H1-neurons
+HeLa-S3 	2 	cervical carcinoma 	ectoderm 	cervix 	cancer 	F 	ENCODE
+Crawford   	ATCC CCL-2.2 	BTO:0000568 	HeLa-S3
+HepG2 	2 	hepatocellular carcinoma 	endoderm 	liver 	cancer 	M 	ENCODE   	ATCC HB-8065 	BTO:0000599 	HepG2
+HUVEC 	2 	umbilical vein endothelial cells 	mesoderm 	blood vessel 	normal 	U 	ENCODE   	Lonza CC-2517 	BTO:0001949 	HUVEC
+LHCN-M2 	2 	skeletal myoblasts derived from satellite cells from the pectoralis major muscle of a 41 year old caucasian heart transplant donor, immortalized with lox-hygro-hTERT ("LH"), and Cdk4-neo ("CN"), Zhu et al. (2007) in Aging Cell, vol. 6, pp 515-523, newly promoted to tier 2: not in 2011 analysis. 	mesoderm 	skeletal muscle myoblast 	  	M 	Wold   	Dr. Woodring Wright Missing 	BTO:0005046 	LHCN-M2
+MCF-7 	2 	mammary gland, adenocarcinoma. (PMID: 4357757), newly promoted to tier 2: not in 2011 analysis 	ectoderm 	breast 	cancer 	F 	Crawford
+Farnham
+Stam   	ATCC HTB-22 	BTO:0000093 	MCF-7
+Monocytes-CD14+ 	2 	Monocytes-CD14+ are CD14-positive cells from human leukapheresis production, from donor RO 01746 (draw 1 ID is RO 01746, draw 2 ID is RO 01826), newly promoted to tier 2: not in 2011 analysis 	mesoderm 	monocytes 	normal 	F 	Stam   	S. Heimfeld Laboratory, FHCRC Monocytes-CD14+ 	BTO:0000876 	Monocytes CD14+
+Monocytes-CD14+_RO01746 	2 	Monocytes-CD14+ are CD14-positive cells from human leukapheresis production, from donor RO 01746 (draw 1 ID is RO 01746, draw 2 ID is RO 01826), Monocytes-CD14+_RO01746 and Monocytes-CD14+_RO01826 are being used as replicates, newly promoted to tier 2: not in 2011 analysis 	mesoderm 	monocytes 	normal 	F 	Stam   	S. Heimfeld Laboratory, FHCRC Monocytes-CD14+_RO01746 	BTO:0000876 	Monocytes CD14+ RO01746
+Monocytes-CD14+_RO01826 	2 	Monocytes-CD14+ are CD14-positive cells from human leukapheresis production, Monocytes-CD14+_RO01826 is a second draw being used as a replicate for Monocytes-CD14+_RO01746, newly promoted to tier 2: not in 2011 analysis 	mesoderm 	monocytes 	normal 	F 	Stam   	S. Heimfeld Laboratory, FHCRC Monocytes-CD14+_RO01826 	BTO:0000876 	Monocytes CD14+ RO01826
+SK-N-SH 	2 	neuroblastoma, newly promoted to tier 2: not in 2011 analysis, the SK-N-SH line was established from a neuroblastoma in a 4 year old individual. 	ectoderm 	brain 	cancer 	F 	Myers   	ATCC HTB-11 	BTO:0001620 	SK-N-SH
+
+																														
+																														
+																														
+																														
+																														
+																														
+'
+```

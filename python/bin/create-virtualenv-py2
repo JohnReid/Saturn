@@ -2,8 +2,8 @@
 
 virtualenv \
     --system-site-packages \
-    --prompt="DREAM:" \
+    --prompt="DREAM:py2" \
     --python=python2 \
-    virtualenv
+    virtualenv-py2
 . virtualenv/bin/activate
-pip install -r reqd-pkgs.txt
+pip install -r reqd-pkgs-py2.txt

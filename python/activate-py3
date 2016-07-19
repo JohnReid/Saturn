@@ -1,0 +1,11 @@
+# Determine directory
+SELF=$(readlink -f $BASH_SOURCE)
+PROJECTDIR=$(dirname $SELF)
+
+# Activate virtualenv
+. $PROJECTDIR/virtualenv-py3/bin/activate
+
+# Update PATH
+PATH=$PROJECTDIR/bin:$PROJECTDIR/scripts:$PATH
+PYTHONPATH=$PROJECTDIR/python:$PYTHONPATH
+# add2virtualenv $PROJECTDIR/python

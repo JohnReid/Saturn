@@ -1,0 +1,8 @@
+jupyter
+pandas
+keras
+pyzmq
+neovim
+biopython
+pyBigWig
+# pyDNase
