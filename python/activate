@@ -3,7 +3,7 @@ SELF=$(readlink -f $BASH_SOURCE)
 PROJECTDIR=$(dirname $SELF)
 
 # Activate virtualenv
-. $PROJECTDIR/virtualenv/bin/activate
+. $PROJECTDIR/virtualenv-py2/bin/activate
 
 # Update PATH
 PATH=$PROJECTDIR/bin:$PROJECTDIR/scripts:$PATH
