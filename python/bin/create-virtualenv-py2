@@ -2,7 +2,7 @@
 
 virtualenv \
     --system-site-packages \
-    --prompt="DREAM:py2" \
+    --prompt="DREAM:py2:" \
     --python=python2 \
     virtualenv-py2
 . virtualenv-py2/bin/activate
