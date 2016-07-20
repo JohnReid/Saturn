@@ -21,6 +21,7 @@ import gzip
 import pandas as pd
 import pickle
 import os
+import logging
 
 # set parameters:
 # max_features = 5000
@@ -32,11 +33,9 @@ nb_filter = 30
 filter_length = 3
 hidden_dims = 250
 nb_epoch = 2
-# We have 5 inputs for each base and one for the DNase information
-input_shape = (region_size, nb_bases + 1)
+tf = 'CTCF'
 cell = 'H1-hESC'
-num_sample = 10000
-percenttrain = .9
+boundunboundratio = .5
 
 BASECODE = np.array(
     ((1, 0, 0, 0),  # A
@@ -45,11 +44,6 @@ BASECODE = np.array(
      (0, 0, 0, 1),  # T
      (0, 0, 0, 0)), # N
     dtype=np.float)
-
-# we use max over time pooling by defining a python function to use
-# in a Lambda layer
-def max_1d(X):
-    return K.max(X, axis=1)
 
 def baseasint(b):
     "Encode bases as integers."
@@ -69,13 +63,6 @@ def encodesequence(seq):
     "Encode a sequence as integers."
     return np.fromiter(map(baseasint, seq.upper()), np.int8, len(seq))
 
-def samplebound(chip, state, cell, num_sample):
-    "Sample rows from chip data which match the cell's state"
-    idxs = np.argwhere(state == chip[cell])[:,0]
-    sampledidxs = np.random.choice(idxs, size=num_sample, replace=False)
-    sampledidxs
-    return chip.iloc[sampledidxs]
-
 def encodebases(bases):
     """Encode bases as a 4-d vector."""
     return np.take(a=BASECODE, indices=bases, axis=0)
@@ -89,20 +76,24 @@ def dataforregion(chrom, start, stop):
 # Load genome from saved numpy data structure or FASTA otherwise
 genomenpz = 'data/hg19.npz'
 if os.path.exists(genomenpz):
+    logging.info('Loading genome: {}'.format(genomenpz))
     genome = dict(np.load(genomenpz).iteritems())
     # sum(map(len, genome.values()))
 else:
     genomefasta = '../Data/annotations/hg19.genome.fa.gz'
     genome = {}
+    logging.info('Reading genome FASTA: {}'.format(genomefasta))
     for record in SeqIO.parse(gzip.open(genomefasta, mode='rt'), "fasta"):
-        print('Loaded: {}'.format(record.id))
+        logging.info('Loaded: {}'.format(record.id))
         genome[record.id] = encodesequence(record.seq)
     # sum(map(len, genome.values()))
     # Save numpy genome
     np.savez(genomenpz, **genome)
 
 # Load bigwig
-dnase = pyBigWig.open("../Data/DNASE/fold_coverage_wiggles/DNASE.{}.fc.signal.bigwig".format(cell))
+dnasefile = "../Data/DNASE/fold_coverage_wiggles/DNASE.{}.fc.signal.bigwig".format(cell)
+logging.info('Loading DNase: {}'.format(dnasefile))
+dnase = pyBigWig.open(dnasefile)
 dnase.chroms()
 dnase.header()
 # Mean value in range
@@ -112,25 +103,32 @@ dnase.stats("chr1", 1000000, 1003000, type="max")
 # Max value in chromosome
 dnase.stats("chr1", type="max")
 # All values in range
-dnase.values("chr1", 1000000, 1003000)
 dnase.values("chr1", 1000000, 1000030)
-dnase.values("chr1", 0, 3)
 
 # Load ChIP data
-chip = pd.read_table('../Data/ChIPseq/labels/CTCF.train.labels.tsv.gz')
+chipfile = '../Data/ChIPseq/labels/{}.train.labels.tsv.gz'.format(tf)
+logging.info('Loading ChIP-seq: {}'.format(chipfile))
+chip = pd.read_table(chipfile)
 
 
-print('Build model...')
+logging.info('Build model...')
 model = Sequential()
 
 # we add a Convolution1D, which will learn nb_filter
 # word group filters of size filter_length:
+# We have one input for each base (excluding 'N') and one for the DNase information
+input_shape = (region_size, nb_bases + 1)
 model.add(Convolution1D(input_shape=input_shape,
                         nb_filter=nb_filter,
                         filter_length=filter_length,
                         border_mode='valid',
                         activation='relu',
                         subsample_length=1))
+
+# we use max over time pooling by defining a python function to use
+# in a Lambda layer
+def max_1d(X):
+    return K.max(X, axis=1)
 
 model.add(Lambda(max_1d, output_shape=(nb_filter,)))
 
@@ -143,30 +141,56 @@ model.add(Activation('relu'))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
+logging.info('Compile model...')
 model.compile(loss='binary_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
-# Sample bound and unbound regions for training and validation
-bound   = samplebound(chip, 'B', cell, int(num_sample/2))
-unbound = samplebound(chip, 'U', cell, num_sample - int(num_sample/2))
-samples = bound.append(unbound)
+def balancetrain(train, cell):
+    "Balance the number of bound/unbound samples in the data."
+    # Bound sample indexes
+    boundidxs = 'B' == train[cell]
+    # How many bound samples?
+    num_bound = boundidxs.sum()
+    # The limit on the number of unbound samples
+    maxunbound = int(num_bound / boundunboundratio)
+    # Do we exceed the limit?
+    if train.shape[0] - num_bound > maxunbound:
+        # Separate into bound and unbound
+        bound   = train[   boundidxs.values]
+        unbound = train[(~boundidxs).values].sample(maxunbound)
+        # Return them mixed together
+        result = bound.append(unbound)
+        return result.reindex(np.random.permutation(result.index))
+    else:
+        return train
+
+# Choose train and test data
+logging.info('Choose train/test...')
+testchrs = ['chr2', 'chr7', 'chr20']
+istest = chip['chr'].isin(testchrs)
+chiptest = chip[istest]
+chiptrain = balancetrain(chip[~istest], cell)
+chiptest.shape
+chiptrain.shape
+
+def getX(chip):
+    return np.array([
+        dataforregion(row['chr'], row['start'], row['stop'])
+        for index, row in chip.iterrows()
+    ])
+
+def getY(chip, cell):
+    return ('B' == chip[cell]).astype(int)
 
 # Munge data
-X = np.array([
-    dataforregion(row['chr'], row['start'], row['stop'])
-    for index, row in samples.iterrows()
-])
-Y = np.array('B' == samples[cell], dtype=int)
-perm = np.random.permutation(samples.shape[0])
-trainsize = int(samples.shape[0] * percenttrain)
-Xtrain = X[perm[:trainsize]]
-Ytrain = Y[perm[:trainsize]]
-Xtest = X[perm[trainsize:]]
-Ytest = Y[perm[trainsize:]]
-Xtrain
+Xtrain = getX(chiptrain)
+Xtest  = getX(chiptest)
+Ytrain = getY(chiptrain)
+Ytest  = getY(chiptest)
 
 # Fit model
+logging.info('Fit model...')
 model.fit(Xtrain, Ytrain,
           batch_size=batch_size,
           nb_epoch=nb_epoch,
