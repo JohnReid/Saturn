@@ -4,6 +4,17 @@
 '''
 
 from __future__ import print_function
+
+import logging
+import sys
+FORMATSTR = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stderr)
+handler.setFormatter(logging.Formatter(FORMATSTR))
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+import numpy as np
 np.random.seed(1337)  # for reproducibility
 
 from keras.preprocessing import sequence
@@ -14,14 +25,12 @@ from keras.layers import Convolution1D
 from keras.datasets import imdb
 from keras import backend as K
 
-import numpy as np
 from Bio import SeqIO
 import pyBigWig
 import gzip
 import pandas as pd
 import pickle
 import os
-import logging
 
 # set parameters:
 # max_features = 5000
@@ -36,6 +45,8 @@ nb_epoch = 2
 tf = 'CTCF'
 cell = 'H1-hESC'
 boundunboundratio = .5
+maxtrain = 10000
+maxtest = maxtrain
 
 BASECODE = np.array(
     ((1, 0, 0, 0),  # A
@@ -68,7 +79,7 @@ def encodebases(bases):
     return np.take(a=BASECODE, indices=bases, axis=0)
 
 def dataforregion(chrom, start, stop):
-    data = np.empty((200, nb_bases + 1))
+    data = np.empty((region_size, nb_bases + 1))
     data[:,0:nb_bases] = encodebases(genome[chrom][start:stop])
     data[:,nb_bases] = dnase.values(chrom, start, stop)
     return data
@@ -76,15 +87,15 @@ def dataforregion(chrom, start, stop):
 # Load genome from saved numpy data structure or FASTA otherwise
 genomenpz = 'data/hg19.npz'
 if os.path.exists(genomenpz):
-    logging.info('Loading genome: {}'.format(genomenpz))
+    logger.info('Loading genome: {}'.format(genomenpz))
     genome = dict(np.load(genomenpz).iteritems())
     # sum(map(len, genome.values()))
 else:
     genomefasta = '../Data/annotations/hg19.genome.fa.gz'
     genome = {}
-    logging.info('Reading genome FASTA: {}'.format(genomefasta))
+    logger.info('Reading genome FASTA: {}'.format(genomefasta))
     for record in SeqIO.parse(gzip.open(genomefasta, mode='rt'), "fasta"):
-        logging.info('Loaded: {}'.format(record.id))
+        logger.info('Loaded: {}'.format(record.id))
         genome[record.id] = encodesequence(record.seq)
     # sum(map(len, genome.values()))
     # Save numpy genome
@@ -92,7 +103,7 @@ else:
 
 # Load bigwig
 dnasefile = "../Data/DNASE/fold_coverage_wiggles/DNASE.{}.fc.signal.bigwig".format(cell)
-logging.info('Loading DNase: {}'.format(dnasefile))
+logger.info('Loading DNase: {}'.format(dnasefile))
 dnase = pyBigWig.open(dnasefile)
 dnase.chroms()
 dnase.header()
@@ -107,11 +118,11 @@ dnase.values("chr1", 1000000, 1000030)
 
 # Load ChIP data
 chipfile = '../Data/ChIPseq/labels/{}.train.labels.tsv.gz'.format(tf)
-logging.info('Loading ChIP-seq: {}'.format(chipfile))
+logger.info('Loading ChIP-seq: {}'.format(chipfile))
 chip = pd.read_table(chipfile)
 
 
-logging.info('Build model...')
+logger.info('Build model...')
 model = Sequential()
 
 # we add a Convolution1D, which will learn nb_filter
@@ -141,12 +152,12 @@ model.add(Activation('relu'))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
-logging.info('Compile model...')
+logger.info('Compile model...')
 model.compile(loss='binary_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
-def balancetrain(train, cell):
+def balancebound(train, cell):
     "Balance the number of bound/unbound samples in the data."
     # Bound sample indexes
     boundidxs = 'B' == train[cell]
@@ -166,31 +177,32 @@ def balancetrain(train, cell):
         return train
 
 # Choose train and test data
-logging.info('Choose train/test...')
+logger.info('Choose train/test...')
 testchrs = ['chr2', 'chr7', 'chr20']
 istest = chip['chr'].isin(testchrs)
-chiptest = chip[istest]
-chiptrain = balancetrain(chip[~istest], cell)
+chiptest = balancebound(chip[istest], cell).sample(maxtest)
+chiptrain = balancebound(chip[~istest], cell).sample(maxtrain)
 chiptest.shape
 chiptrain.shape
 
 def getX(chip):
-    return np.array([
-        dataforregion(row['chr'], row['start'], row['stop'])
-        for index, row in chip.iterrows()
-    ])
+    result = np.empty((chip.shape[0], region_size, nb_bases + 1))
+    for i, (index, row) in enumerate(chip.iterrows()):
+        result[i] = dataforregion(row['chr'], row['start'], row['stop'])
+    return result
 
 def getY(chip, cell):
     return ('B' == chip[cell]).astype(int)
 
 # Munge data
+logger.info('Munge data...')
 Xtrain = getX(chiptrain)
 Xtest  = getX(chiptest)
-Ytrain = getY(chiptrain)
-Ytest  = getY(chiptest)
+Ytrain = getY(chiptrain, cell)
+Ytest  = getY(chiptest, cell)
 
 # Fit model
-logging.info('Fit model...')
+logger.info('Fit model...')
 model.fit(Xtrain, Ytrain,
           batch_size=batch_size,
           nb_epoch=nb_epoch,
