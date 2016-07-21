@@ -14,6 +14,7 @@ rmarkdown::render('overview.Rmd')
 
 
 ```{r parseCombos, echo=FALSE, message=FALSE}
+library(printr)
 library(Saturn)
 library(stringr)
 library(dplyr)
@@ -207,9 +208,18 @@ The major difficulties are that
 
 ## Cell types
 
-Some information on the cell types.
+There are 14 cell types, 3 of which have never had any TF-binding released under ENCODE
 
-```{r cellTypes}
+* PC-3
+* induced pluripotent stem cells
+* liver
+
+Most of the final submission will be predictions of binding for the whole
+genome in these 3 cell types for a subset of TFs. In addition whole genome
+predictions will be required for ATF2 in HEPG2 cells and E2F1 in K562 cells.
+Some metadata on the cell types:
+
+```{r cellTypes, echo=FALSE}
 cells.csv <- 'cell,lineage,tissue,karyotype,sex,description
 "HepG2",endoderm,liver,cancer,M,
 "K562",mesoderm,blood,cancer,F,
@@ -233,6 +243,6 @@ cells <-
         tissue = factor(tissue),
         karyotype = factor(karyotype),
         sex = factor(sex))
-cells
+knitr::kable(cells)
 # devtools::use_data(cells, overwrite=TRUE)
 ```
