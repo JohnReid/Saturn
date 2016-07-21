@@ -33,14 +33,28 @@ sample_n(as.data.frame(ctcf.h1.hesc.peaks), 8)
 
 #
 # Combine ChIP and DNAse data
-h1.hesc.dnase <- summarise.dnase('H1-hESC', 'conservative')
-binding <- binding.tf.cell('REST', 'H1_hESC')
+h1.hesc.dnase <- summarise.dnase('H1-hESC', 'relaxed')
+binding <- binding.tf.cell('CTCF', 'H1_hESC')
 cor(as.vector(h1.hesc.dnase), as.integer(binding))
 data.frame(binding = binding,
            dnase = h1.hesc.dnase) %>%
   group_by(binding) %>%
   summarise(dnase.mean = mean(dnase),
             dnase.sd = sd(dnase))
+
+#
+# Check whether there is any binding where DNase is absent
+#
+# First check at region level with summaries of DNase
+dnase.absent <- h1.hesc.dnase != 0
+has.binding <- binding != 1
+dnase.absent & has.binding
+#
+# Now check at base-pair level with DNase bigwig file
+dnase.path <- file.path(saturn.data(), 'DNASE', 'fold_coverage_wiggles', 'DNASE.H1-hESC.fc.signal.bigwig')
+dnase.bw <- import(dnase.path)
+dnase.bw.absent = dnase.bw[dnase.bw$score == 0]
+regions.binding <- regions[binding != 1]
 
 
 #
