@@ -1,0 +1,3 @@
+#!/bin/bash -ex
+
+autopep8 -r --select=E101,E121 --in-place virtualenv-py3/lib/python3.5/site-packages/prg/

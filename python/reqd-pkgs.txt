@@ -6,3 +6,4 @@ neovim
 biopython
 pyBigWig
 # pyDNase
+pyprg
