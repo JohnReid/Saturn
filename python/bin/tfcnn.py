@@ -19,11 +19,8 @@ np.random.seed(1337)  # for reproducibility
 
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Lambda
-from keras.layers import Embedding
-from keras.layers import Convolution1D
-from keras.datasets import imdb
 from keras import backend as K
+from keras import layers as la
 
 from Bio import SeqIO
 import pyBigWig
@@ -31,6 +28,10 @@ import gzip
 import pandas as pd
 import pickle
 import os
+import functools
+import operator
+import scipy.stats as st
+from prg import prg
 
 # set parameters:
 # max_features = 5000
@@ -38,52 +39,23 @@ region_size = 200
 batch_size = 32  # was max_len
 nb_bases = 4
 # embedding_dims = 50
-nb_filter = 30
-filter_length = 3
+nb_filter = 50
+filter_length = 6 * nb_bases
 hidden_dims = 250
-nb_epoch = 2
+nb_epoch = 1000
 tf = 'CTCF'
 cell = 'H1-hESC'
 boundunboundratio = .5
 maxtrain = 10000
 maxtest = maxtrain
 
-BASECODE = np.array(
-    ((1, 0, 0, 0),  # A
-     (0, 1, 0, 0),  # G
-     (0, 0, 1, 0),  # C
-     (0, 0, 0, 1),  # T
-     (0, 0, 0, 0)), # N
-    dtype=np.float)
+def noise_for(x, scale):
+    return np.random.normal(scale=.1, size=x.shape)
 
-def baseasint(b):
-    "Encode bases as integers."
-    if 'A' == b:
-        return 0
-    if 'C' == b:
-        return 1
-    if 'G' == b:
-        return 2
-    if 'T' == b:
-        return 3
-    if 'N' == b:
-        return 4
-    raise(ValueError('Bad base "{}" given'.format(b)))
 
-def encodesequence(seq):
-    "Encode a sequence as integers."
-    return np.fromiter(map(baseasint, seq.upper()), np.int8, len(seq))
-
-def encodebases(bases):
-    """Encode bases as a 4-d vector."""
-    return np.take(a=BASECODE, indices=bases, axis=0)
-
-def dataforregion(chrom, start, stop):
-    data = np.empty((region_size, nb_bases + 1))
-    data[:,0:nb_bases] = encodebases(genome[chrom][start:stop])
-    data[:,nb_bases] = dnase.values(chrom, start, stop)
-    return data
-
+###################
+# Load data section
+###################
 # Load genome from saved numpy data structure or FASTA otherwise
 genomenpz = 'data/hg19.npz'
 if os.path.exists(genomenpz):
@@ -122,41 +94,9 @@ logger.info('Loading ChIP-seq: {}'.format(chipfile))
 chip = pd.read_table(chipfile)
 
 
-logger.info('Build model...')
-model = Sequential()
-
-# we add a Convolution1D, which will learn nb_filter
-# word group filters of size filter_length:
-# We have one input for each base (excluding 'N') and one for the DNase information
-input_shape = (region_size, nb_bases + 1)
-model.add(Convolution1D(input_shape=input_shape,
-                        nb_filter=nb_filter,
-                        filter_length=filter_length,
-                        border_mode='valid',
-                        activation='relu',
-                        subsample_length=1))
-
-# we use max over time pooling by defining a python function to use
-# in a Lambda layer
-def max_1d(X):
-    return K.max(X, axis=1)
-
-model.add(Lambda(max_1d, output_shape=(nb_filter,)))
-
-# We add a vanilla hidden layer:
-model.add(Dense(hidden_dims))
-model.add(Dropout(0.2))
-model.add(Activation('relu'))
-
-# We project onto a single unit output layer, and squash it with a sigmoid:
-model.add(Dense(1))
-model.add(Activation('sigmoid'))
-
-logger.info('Compile model...')
-model.compile(loss='binary_crossentropy',
-              optimizer='adam',
-              metrics=['accuracy'])
-
+##################################
+# Split training/test data section
+##################################
 def balancebound(train, cell):
     "Balance the number of bound/unbound samples in the data."
     # Bound sample indexes
@@ -170,9 +110,8 @@ def balancebound(train, cell):
         # Separate into bound and unbound
         bound   = train[   boundidxs.values]
         unbound = train[(~boundidxs).values].sample(maxunbound)
-        # Return them mixed together
-        result = bound.append(unbound)
-        return result.reindex(np.random.permutation(result.index))
+        # Return them, no need to shuffle as Keras will do this for us
+        return bound.append(unbound)
     else:
         return train
 
@@ -185,25 +124,146 @@ chiptrain = balancebound(chip[~istest], cell).sample(maxtrain)
 chiptest.shape
 chiptrain.shape
 
-def getX(chip):
-    result = np.empty((chip.shape[0], region_size, nb_bases + 1))
+BASECODE = np.array(
+    ((1, 0, 0, 0),  # A
+     (0, 1, 0, 0),  # G
+     (0, 0, 1, 0),  # C
+     (0, 0, 0, 1),  # T
+     (0, 0, 0, 0)), # N
+    dtype=np.float)
+
+def baseasint(b):
+    "Encode bases as integers."
+    if 'A' == b:
+        return 0
+    if 'C' == b:
+        return 1
+    if 'G' == b:
+        return 2
+    if 'T' == b:
+        return 3
+    if 'N' == b:
+        return 4
+    raise(ValueError('Bad base "{}" given'.format(b)))
+
+def encodesequence(seq):
+    "Encode a sequence as integers."
+    return np.fromiter(map(baseasint, seq.upper()), np.int8, len(seq))
+
+def encodebases(bases):
+    """Encode bases as a 1-d vector with 4 entries for each base."""
+    return np.take(a=BASECODE, indices=bases, axis=0).flatten()
+
+def getseqinput(chip):
+    result = np.empty((chip.shape[0], region_size * nb_bases, 1))
     for i, (index, row) in enumerate(chip.iterrows()):
-        result[i] = dataforregion(row['chr'], row['start'], row['stop'])
+        result[i,:,0] = encodebases(genome[row['chr']][row['start']:row['stop']])
     return result
 
-def getY(chip, cell):
-    return ('B' == chip[cell]).astype(int)
+def getdnaseinput(chip):
+    result = np.empty((chip.shape[0], region_size, 1))
+    for i, (index, row) in enumerate(chip.iterrows()):
+        result[i,:,0] = dnase.values(row['chr'], row['start'], row['stop'])
+        # if np.isnan(result[i]).sum() != 0:
+        #     raise ValueError('Found NaN in DNase data: %s:%d-%d' %
+        #             (row['chr'], row['start'], row['stop']))
+    return np.nan_to_num(result)
+
+def getchipoutput(chip, cell):
+    return np.where(('B' == chip[cell]).values, 1., 0.)
 
 # Munge data
 logger.info('Munge data...')
-Xtrain = getX(chiptrain)
-Xtest  = getX(chiptest)
-Ytrain = getY(chiptrain, cell)
-Ytest  = getY(chiptest, cell)
+seqinputtrain = getseqinput(chiptrain)
+seqinputtest  = getseqinput(chiptest)
+dnaseinputtrain = getdnaseinput(chiptrain)
+dnaseinputtest  = getdnaseinput(chiptest)
+outtrain = getchipoutput(chiptrain, cell)
+outtest  = getchipoutput(chiptest , cell)
 
+
+###############
+# Model section
+###############
+#
+# Sequence branch
+#
+logger.info('Build model...')
+seqbranch = Sequential()
+#
+# we add a Convolution1D, which will learn nb_filter
+# word group filters of size filter_length:
+# We have one input for each base (excluding 'N') and one for the DNase information
+input_shape = (region_size * nb_bases,1)
+seqbranch.add(la.Convolution1D(
+    input_shape=input_shape,
+    nb_filter=nb_filter,
+    filter_length=filter_length,
+    border_mode='valid',
+    #activation='relu',
+    activation='tanh',
+    subsample_length=1))
+seqbranch.output_shape
+#
+# Average each convolutional feature over the whole region
+seqbranch.add(la.AveragePooling1D(pool_length=seqbranch.output_shape[1]))
+
+#
+# DNase branch
+#
+dnasebranch = Sequential()
+dnasebranch.add(la.Convolution1D(
+    input_shape=(region_size, 1),
+    nb_filter=5,
+    filter_length=25,
+    border_mode='valid',
+    #activation='relu',
+    activation='tanh',
+    subsample_length=16))
+dnasebranch.output_shape
+#
+# Common layer
+#
+model = dnasebranch
+# We add a vanilla hidden layer:
+model.add(la.Flatten())
+model.add(la.Dense(5))
+model.add(la.Dropout(0.2))
+model.add(la.Activation('relu'))
+#
+# We project onto a single unit output layer, and squash it with a sigmoid:
+model.add(la.Dense(1))
+model.add(la.Activation('sigmoid'))
+#
+logger.info('Compile model with %d parameters...', model.count_params())
+model.compile(
+    loss='binary_crossentropy',
+    optimizer='adam',
+    # optimizer='rmsprop',
+    metrics=['accuracy'])
+#
+#
+###########
 # Fit model
+###########
 logger.info('Fit model...')
-model.fit(Xtrain, Ytrain,
-          batch_size=batch_size,
-          nb_epoch=nb_epoch,
-          validation_data=(Xtest, Ytest))
+hist = model.fit(
+    dnaseinputtrain, outtrain,
+    batch_size=batch_size,
+    nb_epoch=5000,
+    # nb_epoch=10,
+    validation_data=(dnaseinputtest, outtest))
+logger.info('Done')
+print(hist.history)
+hist.history['val_loss']
+hist.history['val_acc']
+
+#################
+# Analyse results
+#################
+scores = model.predict(dnaseinputtest)
+prg_curve = prg.create_prg_curve(outtest, scores.flatten())
+auprg = prg.calc_auprg(prg_curve)
+logger.info('AUPRG = %f', auprg)
+fig = prg.plot_prg(prg_curve)
+fig.savefig('AUPRG.png')
