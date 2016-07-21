@@ -6,4 +6,5 @@ neovim
 biopython
 pyBigWig
 # pyDNase
-pyprg
+# Install John's fork of pyprg
+git+https://github.com/JohnReid/prg.git#subdirectory=Python_package
