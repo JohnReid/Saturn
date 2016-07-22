@@ -11,10 +11,19 @@ params:
 # Execute this block to render this document.
 #
 devtools::load_all()
-rmarkdown::render("get-TF-fasta.Rmd", params = list(TF = "CTCF"))
+if (FALSE) {
+    rmarkdown::render("get-TF-fasta.Rmd", params = list(TF = "CTCF"))
+} else {
+    for (TF in levels(tfs$TF)) {
+        rmarkdown::render(
+            "get-TF-fasta.Rmd",
+            output_file = str_c('FASTA-', TF, '.pdf'),
+            params = list(TF = TF))
+    }
+}
 ```
 
-Load the ChIP data for this TF.
+Load the ChIP data for `{r params$TF}`.
 ```{r loadChip}
 library(Saturn)
 TF <- params$TF
@@ -51,7 +60,6 @@ write.seqs <- function(gr, label) {
     names(seqs) <- str_c(TF, ".", label, ".", chrom(gr), ':', start(gr), ':', end(gr))
     fasta <- file.path(saturn.data(), 'ChIPseq', 'seqs', str_c(TF, '-', label, '.fa'))
     Biostrings::writeXStringSet(seqs, fasta)
-    seqs
 }
 write.seqs(positive, 'pos')
 write.seqs(negative, 'neg')
