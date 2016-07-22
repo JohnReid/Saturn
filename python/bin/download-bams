@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+
+import shutil
+import synapseclient
+from synapseclient import Project, Folder, File
+import sys
+import os
+
+dest_dir = '../Data/DNASE/bams'
+if not os.path.exists(dest_dir):
+    raise ValueError('Destination directory does not exist.')
+
+# Construct a synapse client
+syn = synapseclient.Synapse()
+
+# Login
+syn.login()
+
+# Download script
+# script = syn.get('syn6445175', download_location='.')
+
+# Get a handle to the bams folder
+folder = syn.get('syn6176232', download_location='.')
+print('Downloading contents of %s folder (%s)\n' % (folder.name, folder.id,))
+
+# Query for child entities
+query_results = syn.query('select id,name from file where parentId=="%s"' % folder.id)
+
+# Download all data files
+data_files = []
+for entity in query_results['results']:
+    print('\tDownloading file: ', entity['file.name'])
+    data_files.append(syn.get(entity['file.id'], downloadLocation=dest_dir, ifcollision='keep.local'))
+print('Download complete!')
+
+
+# Copy data files to dest_dir
+#if dest_dir:
+    #print("Copying files to %s\n" % dest_dir)
+    #for data_file in data_files:
+        #sys.stdout.write('.')
+        #shutil.copy2(data_file.path, dest_dir)
+
+    #print('Copying complete!')

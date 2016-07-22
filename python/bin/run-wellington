@@ -1,11 +1,38 @@
-#!/bin/bash -ex
+#!/bin/bash -iex
 
-PEAKTYPE="conservative"
-CELL="H1-hESC"
-BAM="../Data/DNASE/bams/DNASE.$CELL.biorep1.techrep1.bam"
-PEAKS="../Data/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.narrowPeak.gz"
-BED="../Data/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.bed"
-FOOTPRINTS="../Data/DNASE/bams/footprints/$CELL/$PEAKTYPE/"
+module ()
+{
+    eval `/usr/local/Cluster-Apps/environment-modules/Modules/$MODULE_VERSION/bin/modulecmd bash $*`
+}
+
+#
+# Parse arguments
+USAGE="$0 <cell> <bio rep id> <tech rep id> [conservative|relaxed]"
+CELL=${1?:$USAGE}
+BIOREP=${2?:$USAGE}
+TECHREP=${3?:$USAGE}
+PEAKTYPE=${4-"conservative"}
+echo "Cell type = $CELL"
+echo "Biological replicate = $BIOREP"
+echo "Technical replicate = $TECHREP"
+echo "Peak type = $PEAKTYPE"
+
+#
+# Directories
+SATURN=$HOME/Dev/Saturn
+DATA=$SATURN/Data
+
+#
+# Files and output
+BAM="$DATA/DNASE/bams/DNASE.$CELL.biorep$BIOREP.techrep$TECHREP.bam"
+PEAKS="$DATA/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.narrowPeak.gz"
+BED="$DATA/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.bed"
+FOOTPRINTS="$DATA/DNASE/bams/footprints/$CELL/$PEAKTYPE/$BIOREP/$TECHREP/"
+rm -rf $FOOTPRINTS
 [ -d $FOOTPRINTS ] || mkdir -p $FOOTPRINTS
 [ -f "$BED" ] || (gunzip -c $PEAKS | cut -f1,2,3 >$BED)
+
+#
+# Run Wellington
+. $SATURN/python/activate-py2
 wellington_footprints.py $BED $BAM $FOOTPRINTS
