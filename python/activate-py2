@@ -13,6 +13,6 @@ fi
 . $PROJECTDIR/virtualenv-py2/bin/activate
 
 # Update PATH
-PATH=$PROJECTDIR/bin:$PROJECTDIR/scripts:$PATH
+PATH=$PROJECTDIR/bin:$PROJECTDIR/scripts:$PROJECTDIR/../etc/HOMER/bin:$PATH
 PYTHONPATH=$PROJECTDIR/python:$PYTHONPATH
 # add2virtualenv $PROJECTDIR/python

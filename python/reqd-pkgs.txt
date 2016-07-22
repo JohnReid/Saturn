@@ -1,4 +1,5 @@
 jupyter
+h5py
 pandas
 sklearn
 keras
@@ -6,6 +7,5 @@ pyzmq
 neovim
 biopython
 pyBigWig
-# pyDNase
 # Install John's fork of pyprg
 git+https://github.com/JohnReid/prg.git#subdirectory=Python_package
