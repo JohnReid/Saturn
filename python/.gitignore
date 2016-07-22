@@ -1,4 +1,6 @@
 scratch
+models
+plots
 data
 virtualenv
 virtualenv-py2
