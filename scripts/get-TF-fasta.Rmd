@@ -1,0 +1,58 @@
+---
+title: "Get negative and position FASTA sequences for a TF"
+author: John Reid
+output: pdf_document
+params:
+  TF: CTCF
+---
+
+```{r renderMe, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render("get-TF-fasta.Rmd", params = list(TF = "CTCF"))
+```
+
+Load the ChIP data for this TF.
+```{r loadChip}
+library(Saturn)
+TF <- params$TF
+chip.labels <- load.chip.labels(TF)
+```
+
+Analyse the ChIP data to see which regions bind in at least one cell type.
+```{r getPositive}
+is.bound <- Map(function(x) 3 == x, as.list(mcols(chip.labels)))
+bound <- Reduce(function(x,y) x | y, is.bound)
+positive <- chip.labels[bound]
+```
+We have `r length(positive)` positive ChIP regions.
+
+Analyse the ChIP data to see which regions are unbound in all cell types.
+```{r getNegative}
+is.unbound <- Map(function(x) 1 == x, as.list(mcols(chip.labels)))
+unbound <- Reduce(function(x,y) x & y, is.unbound)
+negative <- chip.labels[unbound]
+```
+We have `r length(negative)` negative ChIP regions.
+
+Sample the negative sequences to the same length as the positive sequences.
+```{r sample}
+# Check we have at least as many negative sequences.
+stopifnot(length(negative) >= length(positive))
+negative <- negative[sample(length(negative), length(positive))]
+```
+
+Write the positive and negative sequences to separate FASTA files.
+```{r writeSeqs}
+write.seqs <- function(gr, label) {
+    seqs <- BSgenome::getSeq(hg19, gr)
+    names(seqs) <- str_c(TF, ".", label, ".", chrom(gr), ':', start(gr), ':', end(gr))
+    fasta <- file.path(saturn.data(), 'ChIPseq', 'seqs', str_c(TF, '-', label, '.fa'))
+    Biostrings::writeXStringSet(seqs, fasta)
+    seqs
+}
+write.seqs(positive, 'pos')
+write.seqs(negative, 'neg')
+```
