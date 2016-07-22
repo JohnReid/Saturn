@@ -10,13 +10,13 @@
 
 #! sbatch directives begin here ###############################
 #! Name of the job:
-#SBATCH -J darwinjob
+#SBATCH -J wellington
 #! Which project should be charged:
-#SBATCH -A CHANGEME
+#SBATCH -A MRC-BSU-SL2
 #! How many whole nodes should be allocated?
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #! How many (MPI) tasks will there be in total? (<= nodes*16)
-#SBATCH --ntasks=32
+#SBATCH --ntasks=1
 #! How much wallclock time will be required?
 #SBATCH --time=02:00:00
 #! What types of email messages do you wish to receive?
@@ -26,7 +26,7 @@
 ##SBATCH --no-requeue
 
 #! Do not change:
-#SBATCH -p sandybridge
+#SBATCH -p mrc-bsu-sand
 
 #! sbatch directives end here (put any additional directives above this line)
 
@@ -56,10 +56,10 @@ module load default-impi                   # REQUIRED - loads the basic environm
 #! Insert additional module load commands after this line if needed:
 
 #! Full path to application executable: 
-application=""
+application="/home/jer15/Dev/Saturn/python/bin/run-wellington"
 
 #! Run options for the application:
-options=""
+options="$@"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
@@ -86,11 +86,11 @@ export I_MPI_PIN_ORDER=scatter # Adjacent domains have minimal sharing of caches
 #! Uncomment one choice for CMD below (add mpirun/mpiexec options if necessary):
 
 #! Choose this for a MPI code (possibly using OpenMP) using Intel MPI.
-CMD="mpirun -ppn $mpi_tasks_per_node -np $np $application $options"
+#CMD="mpirun -ppn $mpi_tasks_per_node -np $np $application $options"
 
 #! Choose this for a pure shared-memory OpenMP parallel program on a single node:
 #! (OMP_NUM_THREADS threads will be created):
-#CMD="$application $options"
+CMD="$application $options"
 
 #! Choose this for a MPI code (possibly using OpenMP) using OpenMPI:
 #CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
