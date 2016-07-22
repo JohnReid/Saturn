@@ -258,6 +258,16 @@ print(hist.history)
 hist.history['val_loss']
 hist.history['val_acc']
 
+############
+# Save model
+############
+json_string = model.to_json()
+open('models/my_model_architecture.json', 'w').write(json_string)
+model.save_weights('models/my_model_weights.h5')
+# to load...
+# model = model_from_json(open('my_model_architecture.json').read())
+# model.load_weights('my_model_weights.h5')
+
 #################
 # Analyse results
 #################
@@ -266,4 +276,4 @@ prg_curve = prg.create_prg_curve(outtest, scores.flatten())
 auprg = prg.calc_auprg(prg_curve)
 logger.info('AUPRG = %f', auprg)
 fig = prg.plot_prg(prg_curve)
-fig.savefig('AUPRG.png')
+fig.savefig('plots/AUPRG.png')
