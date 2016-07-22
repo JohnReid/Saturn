@@ -1,0 +1,11 @@
+#!/bin/bash -ex
+
+PEAKTYPE="conservative"
+CELL="H1-hESC"
+BAM="../Data/DNASE/bams/DNASE.$CELL.biorep1.techrep1.bam"
+PEAKS="../Data/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.narrowPeak.gz"
+BED="../Data/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.bed"
+FOOTPRINTS="../Data/DNASE/bams/footprints/$CELL/$PEAKTYPE/"
+[ -d $FOOTPRINTS ] || mkdir -p $FOOTPRINTS
+[ -f "$BED" ] || (gunzip -c $PEAKS | cut -f1,2,3 >$BED)
+wellington_footprints.py $BED $BAM $FOOTPRINTS
