@@ -12,4 +12,4 @@ for filename in os.listdir(bamdir):
         cell = match.group(1)
         biorep = match.group(2)
         techrep = match.group(3)
-        print('{}: {} {} {}'.format(filename, cell, biorep, techrep))
+        print('{} {} {} {}'.format(filename, cell, biorep, techrep))
