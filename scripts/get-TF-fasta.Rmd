@@ -1,7 +1,7 @@
 ---
 title: "Get negative and position FASTA sequences for a TF"
 author: John Reid
-output: pdf_document
+output: html_document
 params:
   TF: CTCF
 ---
@@ -17,7 +17,7 @@ if (FALSE) {
     for (TF in levels(tfs$TF)) {
         rmarkdown::render(
             "get-TF-fasta.Rmd",
-            output_file = str_c('FASTA-', TF, '.pdf'),
+            output_file = str_c('FASTA-', TF, '.html'),
             params = list(TF = TF))
     }
 }
