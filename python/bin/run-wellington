@@ -1,5 +1,7 @@
 #!/bin/bash -iex
 
+#
+# Define module command as needed in virtualenv activation
 module ()
 {
     eval `/usr/local/Cluster-Apps/environment-modules/Modules/$MODULE_VERSION/bin/modulecmd bash $*`
@@ -28,7 +30,6 @@ BAM="$DATA/DNASE/bams/DNASE.$CELL.biorep$BIOREP.techrep$TECHREP.bam"
 PEAKS="$DATA/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.narrowPeak.gz"
 BED="$DATA/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.bed"
 FOOTPRINTS="$DATA/DNASE/bams/footprints/$CELL/$PEAKTYPE/$BIOREP/$TECHREP/"
-# rm -rf $FOOTPRINTS
 
 #
 # Make output directory if needed
