@@ -10,7 +10,7 @@
 
 #! sbatch directives begin here ###############################
 #! Name of the job:
-#SBATCH -J JOBNAME
+#SBATCH -J DREME
 #! Which project should be charged:
 #SBATCH -A MRC-BSU-SL2
 #! How many whole nodes should be allocated?
