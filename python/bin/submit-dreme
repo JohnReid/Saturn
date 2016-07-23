@@ -14,7 +14,19 @@ for TF in \
     CTCF    GABPA  NANOG  TCF12
 do
     echo $TF
+    POS=$SEQSDIR/$TF-pos.fa
+    NEG=$SEQSDIR/$TF-neg.fa
     OUTDIR=$SEQSDIR/DREME-$TF
+    if [ ! -f $POS ]
+    then
+        echo "FASTA file missing: $POS"
+        continue
+    fi
+    if [ ! -f $NEG ]
+    then
+        echo "FASTA file missing: $NEG"
+        continue
+    fi
     [ -d $OUTDIR ] || \
         qsub SLURM/dreme.slurm \
             -png -eps \
