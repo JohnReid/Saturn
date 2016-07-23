@@ -13,24 +13,28 @@ for TF in \
     CREB1   FOXA2  MYC    TAF1 \
     CTCF    GABPA  NANOG  TCF12
 do
-    echo $TF
     POS=$SEQSDIR/$TF-pos.fa
     NEG=$SEQSDIR/$TF-neg.fa
     OUTDIR=$SEQSDIR/DREME-$TF
     if [ ! -f $POS ]
     then
-        echo "FASTA file missing: $POS"
+        echo "$TF: $FASTA file missing: $POS"
         continue
     fi
     if [ ! -f $NEG ]
     then
-        echo "FASTA file missing: $NEG"
+        echo "$TF: $FASTA file missing: $NEG"
         continue
     fi
-    [ -d $OUTDIR ] || \
+    if [ -d $OUTDIR ]
+    then
+        echo "$TF: already run, not submitting"
+    else
+        echo "$TF: Submitting job"
         qsub SLURM/dreme.slurm \
             -png -eps \
             -p $SEQSDIR/$TF-pos.fa \
             -n $SEQSDIR/$TF-neg.fa \
             -o $SEQSDIR/DREME-$TF
+    fi
 done
