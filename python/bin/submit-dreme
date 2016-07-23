@@ -31,6 +31,7 @@ do
         echo "$TF: already run, not submitting"
     else
         echo "$TF: Submitting job"
+        ls -l $POS $NEG
         qsub SLURM/dreme.slurm \
             -png -eps \
             -p $SEQSDIR/$TF-pos.fa \
