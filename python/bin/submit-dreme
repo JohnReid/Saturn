@@ -14,9 +14,11 @@ for TF in \
     CTCF    GABPA  NANOG  TCF12
 do
     echo $TF
-    qsub SLURM/dreme.slurm \
-        -png -eps \
-        -p $SEQSDIR/$TF-pos.fa \
-        -n $SEQSDIR/$TF-neg.fa \
-        -o $SEQSDIR/DREME-$TF
+    OUTDIR=$SEQSDIR/DREME-$TF
+    [ -d $OUTDIR ] || \
+        qsub SLURM/dreme.slurm \
+            -png -eps \
+            -p $SEQSDIR/$TF-pos.fa \
+            -n $SEQSDIR/$TF-neg.fa \
+            -o $SEQSDIR/DREME-$TF
 done
