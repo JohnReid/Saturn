@@ -35,4 +35,4 @@ rm -rf $FOOTPRINTS
 #
 # Run Wellington
 . $SATURN/python/activate-py2
-wellington_footprints.py $BED $BAM $FOOTPRINTS
+wellington_footprints.py -fdrlimit -5 $BED $BAM $FOOTPRINTS

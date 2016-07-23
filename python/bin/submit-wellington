@@ -7,6 +7,6 @@
 while IFS='' read -r line || [[ -n "$line" ]]; do
     echo $line
     a=( $line )
-    # qsub SLURM/wellington.slurm ${a[1]} ${a[2]} ${a[3]} conservative
+    qsub SLURM/wellington.slurm ${a[1]} ${a[2]} ${a[3]} conservative
     qsub SLURM/wellington.slurm ${a[1]} ${a[2]} ${a[3]} relaxed
 done
