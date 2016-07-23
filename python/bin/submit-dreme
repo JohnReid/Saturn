@@ -18,5 +18,5 @@ do
         -png -eps \
         -p $SEQSDIR/$TF-pos.fa \
         -n $SEQSDIR/$TF-neg.fa \
-        -oc $SEQSDIR/DREME-$TF
+        -o $SEQSDIR/DREME-$TF
 done
