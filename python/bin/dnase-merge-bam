@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+USAGE="$0 <cell type>"
+CELL=${1?:$USAGE}
+
+DATADIR=/home/jer15/Dev/Saturn/Data/DNASE/bams
+MERGED=$DATADIR/DNASE.$CELL.merged.bam
+
+#
+# Merge all the bams for the cell type
+#
+[ -f $MERGED ] || bin/bam-merge $DATADIR/DNASE.$CELL.biorep*.techrep*.bam >$MERGED
+
+#
+# Index the resulting bam
+#
+[ -f $MERGED.bai ] || samtools index $MERGED

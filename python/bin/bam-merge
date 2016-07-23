@@ -1,0 +1,48 @@
+#!/bin/bash -e
+
+CHRS="chr1  chr2  chr3  chr4  chr5  chr6  chr7  chr8  chr9  chr10 \
+      chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 \
+      chr21 chr22 chrX"
+
+SCRATCH=/scratch/jer15
+
+#
+# Merge input files if we have more than one
+#
+if [ "$#" -eq 1 ]
+then
+    MERGED=$1
+    echo "Not merging as only have one input file: $MERGED" >&2
+else
+    MERGED=$SCRATCH/bam-merge-merged-$$.bam
+    echo "Merging to $MERGED" >&2
+    [ -f $MERGED ] || samtools merge - "$@" >$MERGED
+fi
+
+#
+# Index merged file if needed
+#
+[ -f $MERGED.bai ] || samtools index $MERGED
+
+#
+# Only use reads mapped to given chromosomes
+#
+FILTERED=$SCRATCH/bam-merge-filtered-$$.bam
+echo "Filtering to $FILTERED" >&2
+[ -f $FILTERED ] || samtools view -b $MERGED $CHRS >$FILTERED
+
+#
+# Get read statistics
+#
+STATS=$(samtools flagstat $FILTERED)
+echo "$STATS" >&2
+MAPPED=$(echo "$STATS" | grep mapped | head -1 | cut -d' ' -f1)
+echo "# mapped: $MAPPED" >&2
+SAMPLEPROB=$(bc -l <<< "50000000/$MAPPED")
+echo "Sample prob: $SAMPLEPROB" >&2
+
+#
+# Downsample reads
+#
+echo "Down-sampling to stdout" >&2
+samtools view -s $SAMPLEPROB -b $FILTERED
