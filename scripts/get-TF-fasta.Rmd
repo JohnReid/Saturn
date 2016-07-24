@@ -47,14 +47,15 @@ dnase.max <- Reduce(pmax, dnase.cells)
 
 Sort the sequences by their maximum DNase levels and select those with
 the highest levels that are not bound
-```{r sample}
+```{r getNegative}
 # Check we have at least as many negative sequences.
-stopifnot(length(negative) >= length(positive))
 dnase.max.idx <- order(dnase.max, decreasing = TRUE)
 chip.labels.ordered <- chip.labels[dnase.max.idx]
 is.unbound <- Map(function(x) 3 != x, as.list(mcols(chip.labels.ordered)))
 unbound <- Reduce(function(x,y) x & y, is.unbound)
-negative <- chip.labels.ordered[unbound][1:length(positive)]
+negative <- chip.labels.ordered[unbound]
+stopifnot(length(negative) >= length(positive))
+negative <- negative[1:length(positive)]
 stopifnot(length(negative) == length(positive))
 ```
 We have `r length(negative)` negative ChIP regions.

@@ -9,18 +9,15 @@
 #!#############################################################
 
 #! sbatch directives begin here ###############################
-#! Name of the job:
-#SBATCH -J FASTA
-#! Which project should be charged:
-#SBATCH -A MRC-BSU-SL2
-#! How many whole nodes should be allocated?
-#SBATCH --nodes=1
-#! How many (MPI) tasks will there be in total? (<= nodes*16)
-#SBATCH --ntasks=1
-#! How much wallclock time will be required?
-#SBATCH --time=1:00:00
-#! What types of email messages do you wish to receive?
-#SBATCH --mail-type=FAIL
+#SBATCH -J FASTA                   # Name of the job:
+#SBATCH -A MRC-BSU-SL2             # Which project should be charged:
+#SBATCH --nodes=1                  # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                 # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --mem=32768                # How many MB each node is allocated
+#SBATCH --time=1:00:00             # How much wallclock time will be required?
+#SBATCH -o slurm-get-fasta.%j.out  # stdout
+#SBATCH -e slurm-get-fasta.%j.err  # stderr
+#SBATCH --mail-type=FAIL           # What types of email messages do you wish to receive?
 #! Uncomment this to prevent the job from being requeued (e.g. if
 #! interrupted by node failure or system downtime):
 ##SBATCH --no-requeue

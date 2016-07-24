@@ -6,4 +6,7 @@ virtualenv
 virtualenv-py2
 virtualenv-py3
 slurm-*.out
+slurm-*.err
+slurm.*.out
+slurm.*.err
 machine.file.*
