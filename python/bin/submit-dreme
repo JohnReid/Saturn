@@ -3,7 +3,6 @@
 #
 # Submit a DREME job for each TF
 #
-SEQSDIR=../Data/ChIPseq/seqs
 for TF in \
     ARID3A  E2F1   GATA3  REST   TCF7L2 \
     ATF2    E2F6   HNF4A  RFX5   TEAD4 \
@@ -13,29 +12,6 @@ for TF in \
     CREB1   FOXA2  MYC    TAF1 \
     CTCF    GABPA  NANOG  TCF12
 do
-    POS=$SEQSDIR/$TF-pos.fa
-    NEG=$SEQSDIR/$TF-neg.fa
-    OUTDIR=$SEQSDIR/DREME-$TF
-    if [ ! -f $POS ]
-    then
-        echo "$TF: $FASTA file missing: $POS"
-        continue
-    fi
-    if [ ! -f $NEG ]
-    then
-        echo "$TF: $FASTA file missing: $NEG"
-        continue
-    fi
-    if [ -d $OUTDIR ]
-    then
-        echo "$TF: already run, not submitting"
-    else
-        echo "$TF: Submitting job"
-        ls -l $POS $NEG
-        qsub SLURM/dreme.slurm \
-            -png -eps \
-            -p $SEQSDIR/$TF-pos.fa \
-            -n $SEQSDIR/$TF-neg.fa \
-            -o $SEQSDIR/DREME-$TF
-    fi
+    echo $TF
+    sbatch $SATURNDIR/python/bin/tf-dreme $TF
 done
