@@ -2,7 +2,8 @@
 # Determine directory
 SELF=$(readlink -f $BASH_SOURCE)
 PROJECTDIR=$(dirname $SELF)
-SATURNDIR=$(readlink -f $PROJECTDIR/..)
+export SATURNDIR=$(readlink -f $PROJECTDIR/..)
+export SLURMDIR=$SATURNDIR/slurm
 
 #
 # Set up correct modules on BSU-HPC

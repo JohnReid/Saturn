@@ -1,0 +1,71 @@
+#!/bin/bash -e
+
+#
+# Run DREME on a TF's positive and negative sequences
+#
+
+#! sbatch directives begin here ###############################
+#SBATCH -p mrc-bsu-sand             # Partition
+#SBATCH -J DREME                    # Name of the job
+#SBATCH -A MRC-BSU-SL2              # Which project should be charged:
+#SBATCH --nodes=1                   # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                  # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --mem=04000                 # How many MB each node is allocated
+#SBATCH --time=66:00:00             # How much wallclock time will be required?
+#SBATCH -o $SLURMDIR/dreme.%j.out   # stdout
+#SBATCH -e $SLURMDIR/dreme.%j.err   # stderr
+#SBATCH --mail-type=FAIL            # What types of email messages do you wish to receive?
+##SBATCH --no-requeue               # Uncomment this to prevent the job from being requeued (e.g. if
+                                    # interrupted by node failure or system downtime):
+
+if [ 'login-mrc-bsu' == $(hostname) ]
+then
+    #! Optionally modify the environment seen by the application
+    #! (note that SLURM reproduces the environment at submission irrespective of ~/.bashrc):
+    . /etc/profile.d/modules.sh                # Leave this line (enables the module command)
+    module purge                               # Removes all modules still loaded
+    module load default-impi                   # REQUIRED - loads the basic environment
+fi
+
+#
+# Parse arguments
+#
+USAGE="USAGE: $0 <TF>"
+TF=${1?:$USAGE}
+
+#
+# Set up variables
+#
+SEQSDIR=$SATURNDIR/Data/ChIPseq/seqs
+POS=$SEQSDIR/$TF-pos.fa
+NEG=$SEQSDIR/$TF-neg.fa
+OUTDIR=$SEQSDIR/DREME-$TF
+
+#
+# Check everything is ready
+#
+if [ ! -f $POS ]
+then
+    echo "$TF: $FASTA file missing: $POS"
+    exit -1
+fi
+if [ ! -f $NEG ]
+then
+    echo "$TF: $FASTA file missing: $NEG"
+    exit -1
+fi
+if [ -d $OUTDIR ]
+then
+    echo "$TF: already run: $OUTDIR"
+    exit -1
+fi
+
+#
+# Run job
+#
+ls -l $POS $NEG
+dreme \
+    -png -eps \
+    -p $SEQSDIR/$TF-pos.fa \
+    -n $SEQSDIR/$TF-neg.fa \
+    -o $SEQSDIR/DREME-$TF

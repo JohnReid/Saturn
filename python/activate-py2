@@ -1,19 +1,7 @@
-# Determine directory
-SELF=$(readlink -f $BASH_SOURCE)
-PROJECTDIR=$(dirname $SELF)
+#
+# Activate generic non-virtualenv stuff
+. $PROJECTDIR/activate
 
-# Set up correct modules on BSU-HPC
-if [ 'login-mrc-bsu' == $(hostname) ]
-then
-  . /etc/profile.d/modules.sh
-  module load python/3.5.1
-  module load cuda/8.0-RC
-fi
-
+#
 # Activate virtualenv
 . $PROJECTDIR/virtualenv-py2/bin/activate
-
-# Update PATH
-PATH=$PROJECTDIR/bin:$PROJECTDIR/scripts:$PROJECTDIR/../etc/HOMER/bin:$PATH
-PYTHONPATH=$PROJECTDIR/python:$PYTHONPATH
-# add2virtualenv $PROJECTDIR/python
