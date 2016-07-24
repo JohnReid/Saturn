@@ -38,20 +38,26 @@ positive <- chip.labels[bound]
 ```
 We have `r length(positive)` positive ChIP regions.
 
-Analyse the ChIP data to see which regions are unbound in all cell types.
-```{r getNegative}
-is.unbound <- Map(function(x) 1 == x, as.list(mcols(chip.labels)))
-unbound <- Reduce(function(x,y) x & y, is.unbound)
-negative <- chip.labels[unbound]
+Determine maximum DNase levels across cell types in the negative sequences.
+```{r dnase}
+tf.cells <- unrify(colnames(mcols(chip.labels)))
+dnase.cells <- lapply(as.character(tf.cells), function(cell) summarise.dnase(cell, 'relaxed'))
+dnase.max <- Reduce(pmax, dnase.cells)
 ```
-We have `r length(negative)` negative ChIP regions.
 
-Sample the negative sequences to the same length as the positive sequences.
+Sort the sequences by their maximum DNase levels and select those with
+the highest levels that are not bound
 ```{r sample}
 # Check we have at least as many negative sequences.
 stopifnot(length(negative) >= length(positive))
-negative <- negative[sample(length(negative), length(positive))]
+dnase.max.idx <- order(dnase.max, decreasing = TRUE)
+chip.labels.ordered <- chip.labels[dnase.max.idx]
+is.unbound <- Map(function(x) 3 != x, as.list(mcols(chip.labels.ordered)))
+unbound <- Reduce(function(x,y) x & y, is.unbound)
+negative <- chip.labels.ordered[unbound][1:length(positive)]
+stopifnot(length(negative) == length(positive))
 ```
+We have `r length(negative)` negative ChIP regions.
 
 Write the positive and negative sequences to separate FASTA files.
 ```{r writeSeqs}

@@ -21,6 +21,19 @@ hg19 <- BSgenome.Hsapiens.UCSC.hg19
 rify <- function(x) str_replace_all(x, '[-{}]', '_')
 
 
+#' Which string matches
+str.match <- function(strs, x) which(strs == x)
+
+#' Convert back from R names to original cell names
+#'
+#' E.g. substitute '-' for '_'
+#'
+unrify <- function(x) {
+  idxs <- vapply(x, function(c.r) str.match(cells$cell.r, c.r), FUN.VALUE=0)
+  cells$cell[idxs]
+}
+
+
 #' The root directory of the Saturn data.
 saturn.data <- function() getOption('saturn.data',
                                     system.file('Data', package='Saturn'))

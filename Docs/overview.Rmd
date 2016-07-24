@@ -239,6 +239,7 @@ cells <-
     as.data.frame(readr::read_csv(cells.csv)) %>%
     mutate(
         cell = factor(cell, levels=levels(tfs$cell)),
+        cell.r = rify(cell),
         lineage = factor(lineage),
         tissue = factor(tissue),
         karyotype = factor(karyotype),
