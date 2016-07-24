@@ -1,13 +1,6 @@
 #!/bin/bash -iex
 
 #
-# Define module command as needed in virtualenv activation
-module ()
-{
-    eval `/usr/local/Cluster-Apps/environment-modules/Modules/$MODULE_VERSION/bin/modulecmd bash $*`
-}
-
-#
 # Parse arguments
 USAGE="$0 <cell> <bio rep id> <tech rep id> [conservative|relaxed]"
 CELL=${1?:$USAGE}

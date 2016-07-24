@@ -5,6 +5,7 @@ PROJECTDIR=$(dirname $SELF)
 # Set up correct modules on BSU-HPC
 if [ 'login-mrc-bsu' == $(hostname) ]
 then
+  . /etc/profile.d/modules.sh
   module load python/3.5.1
   module load cuda/8.0-RC
 fi
