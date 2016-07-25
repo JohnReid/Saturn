@@ -10,3 +10,7 @@ PROJECTDIR=$(dirname $SELF)
 #
 # Activate virtualenv
 . $PROJECTDIR/virtualenv-py2/bin/activate
+
+#
+# Update library path for boost python
+export LD_LIBRARY_PATH=/home/jer15/src/boost_1_61_0/stage/lib:$LD_LIBRARY_PATH
