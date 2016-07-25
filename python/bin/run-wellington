@@ -1,38 +1,73 @@
-#!/bin/bash -iex
+#!/bin/bash -e
+#
+# Run wellington on a cell's merged bam file.
+#
+
+#
+# sbatch directives
+#
+#SBATCH -p mrc-bsu-sand                 # Partition
+#SBATCH -J WELLINGTON                   # Name of the job
+#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
+#SBATCH --nodes=1                       # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --cpus-per-task=16              # CPUs/task
+#SBATCH --mem=60000                     # How many MB each node is allocated
+#SBATCH --time=24:00:00                 # How much wallclock time will be required?
+#SBATCH -o wellington-%j.out            # stdout
+#SBATCH -e wellington-%j.out            # stderr
+#SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
+##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
+                                        # interrupted by node failure or system downtime):
 
 #
 # Parse arguments
-USAGE="$0 <cell> <bio rep id> <tech rep id> [conservative|relaxed]"
+#
+USAGE="$0 <cell> [conservative|relaxed]"
 CELL=${1?:$USAGE}
-BIOREP=${2?:$USAGE}
-TECHREP=${3?:$USAGE}
-PEAKTYPE=${4-"conservative"}
-echo "Cell type            = $CELL"
-echo "Biological replicate = $BIOREP"
-echo "Technical replicate  = $TECHREP"
-echo "Peak type            = $PEAKTYPE"
+PEAKTYPE=${2-"relaxed"}
+echo "Cell type = $CELL"
+echo "Peak type = $PEAKTYPE"
 
 #
 # Directories
+#
 SATURN=$HOME/Dev/Saturn
 DATA=$SATURN/Data
 
 #
 # Files and output
-BAM="$DATA/DNASE/bams/DNASE.$CELL.biorep$BIOREP.techrep$TECHREP.bam"
+#
+BAM="$DATA/DNASE/bams/DNASE.$CELL.merged.bam"
 PEAKS="$DATA/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.narrowPeak.gz"
 BED="$DATA/DNASE/peaks/$PEAKTYPE/DNASE.$CELL.$PEAKTYPE.bed"
-FOOTPRINTS="$DATA/DNASE/bams/footprints/$CELL/$PEAKTYPE/$BIOREP/$TECHREP/"
+FOOTPRINTS="$DATA/DNASE/bams/footprints/$CELL/$PEAKTYPE"
+
+#
+# Check input
+#
+if [ ! -f "$BAM" ]
+then
+    echo "No input file: $BAM"
+    exit -1
+fi
 
 #
 # Make output directory if needed
-[ -d $FOOTPRINTS ] || mkdir -p $FOOTPRINTS
+#
+if [ -d $FOOTPRINTS ]
+then
+    echo "Output directory already exists not running: $OUTPUTDIR"
+else
+    mkdir -p $FOOTPRINTS
+fi
 
 #
 # Unzip peaks if needed
+#
 [ -f "$BED" ] || (gunzip -c $PEAKS | cut -f1,2,3 >$BED)
 
 #
 # Run Wellington
-. $SATURN/python/activate-py2
+#
 wellington_footprints.py -fdrlimit -5 $BED $BAM $FOOTPRINTS
