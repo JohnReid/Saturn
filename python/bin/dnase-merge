@@ -99,7 +99,7 @@ echo "Sample prob: $SAMPLEPROB"
 #
 # Downsample reads
 #
-echo "Down-sampling"
+echo "Down-sampling to $OUTPUT"
 [ -f $OUTPUT ] || samtools view -s $SAMPLEPROB -b $FILTERED >$OUTPUT
 
 #
@@ -110,7 +110,8 @@ rm $FILTERED
 #
 # Index the resulting bam
 #
-[ -f $MERGED.bai ] || samtools index $MERGED
+echo "Indexing"
+[ -f $OUTPUT.bai ] || samtools index $OUTPUT
 
 #
 # Report completion
