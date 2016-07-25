@@ -54,6 +54,15 @@ FILTERED=$SCRATCH/bam-merge-$CELL-filtered-$$.bam
 OUTPUT=$DATADIR/DNASE.$CELL.merged.bam
 
 #
+# Check if output already exists
+#
+if [ -f "$OUTPUT" ]
+then
+    echo "Output already exists: $OUTPUT"
+    exit -1
+fi
+
+#
 # Merge input files if we have more than one
 #
 if [ $(wc -w <<< "$INPUTBAMS") -eq 1 ]
