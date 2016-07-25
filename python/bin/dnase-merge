@@ -12,7 +12,7 @@
 #SBATCH -A MRC-BSU-SL2                  # Which project should be charged
 #SBATCH --nodes=1                       # How many whole nodes should be allocated?
 #SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
-#SBATCH --mem=04000                     # How many MB each node is allocated
+#SBATCH --mem=32000                     # How many MB each node is allocated
 #SBATCH --time=06:00:00                 # How much wallclock time will be required?
 #SBATCH -o dnase-merge-%j.out           # stdout
 #SBATCH -e dnase-merge-%j.out           # stderr
@@ -38,6 +38,7 @@ fi
 #
 USAGE="USAGE: $0 <CELL>"
 CELL=${1?:$USAGE}
+echo "CELL: $CELL"
 
 
 #
@@ -49,7 +50,7 @@ CHRS="chr1  chr2  chr3  chr4  chr5  chr6  chr7  chr8  chr9  chr10 \
       chr21 chr22 chrX"
 SCRATCH=/scratch/jer15
 INPUTBAMS=$(ls $DATADIR/DNASE.$CELL.biorep*.techrep*.bam)
-FILTERED=$SCRATCH/bam-merge-filtered-$$.bam
+FILTERED=$SCRATCH/bam-merge-$CELL-filtered-$$.bam
 OUTPUT=$DATADIR/DNASE.$CELL.merged.bam
 
 #
@@ -60,7 +61,7 @@ then
     MERGED=$INPUTBAMS
     echo "Not merging as only have one input file: $MERGED"
 else
-    MERGED=$SCRATCH/bam-merge-merged-$$.bam
+    MERGED=$SCRATCH/bam-merge-$CELL-merged-$$.bam
     echo "Merging to $MERGED"
     [ -f $MERGED ] || samtools merge - $INPUTBAMS >$MERGED
 fi
@@ -101,3 +102,8 @@ rm $FILTERED
 # Index the resulting bam
 #
 [ -f $MERGED.bai ] || samtools index $MERGED
+
+#
+# Report completion
+#
+echo "Done: $CELL"
