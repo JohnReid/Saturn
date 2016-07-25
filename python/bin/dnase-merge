@@ -68,9 +68,11 @@ fi
 if [ $(wc -w <<< "$INPUTBAMS") -eq 1 ]
 then
     MERGED=$INPUTBAMS
+    DELETEMERGED=""
     echo "Not merging as only have one input file: $MERGED"
 else
     MERGED=$SCRATCH/bam-merge-$CELL-merged-$$.bam
+    DELETEMERGED=$MERGED
     echo "Merging to $MERGED"
     [ -f $MERGED ] || samtools merge - $INPUTBAMS >$MERGED
 fi
@@ -105,7 +107,7 @@ echo "Down-sampling to $OUTPUT"
 #
 # Tidy up
 #
-rm $FILTERED
+rm $FILTERED $DELETEMERGED
 
 #
 # Index the resulting bam
