@@ -20,6 +20,11 @@ CELLS="
     SK-N-SH
 "
 
+if [ -z "${SATURNDIR}" ]
+then
+    echo "Saturn not activated."
+    exit -1
+fi
 cd $SATURNDIR/slurm
 for CELL in  $CELLS
 do

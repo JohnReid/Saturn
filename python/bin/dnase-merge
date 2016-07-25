@@ -1,4 +1,4 @@
-#/bin/bash -e
+#!/bin/bash -e
 #
 # Merge the DNase-seq reads for one cell type.
 #
@@ -48,20 +48,21 @@ CHRS="chr1  chr2  chr3  chr4  chr5  chr6  chr7  chr8  chr9  chr10 \
       chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 \
       chr21 chr22 chrX"
 SCRATCH=/scratch/jer15
+INPUTBAMS=$(ls $DATADIR/DNASE.$CELL.biorep*.techrep*.bam)
 FILTERED=$SCRATCH/bam-merge-filtered-$$.bam
 OUTPUT=$DATADIR/DNASE.$CELL.merged.bam
 
 #
 # Merge input files if we have more than one
 #
-if [ "$#" -eq 1 ]
+if [ $(wc -w <<< "$INPUTBAMS") -eq 1 ]
 then
-    MERGED=$1
+    MERGED=$INPUTBAMS
     echo "Not merging as only have one input file: $MERGED"
 else
     MERGED=$SCRATCH/bam-merge-merged-$$.bam
     echo "Merging to $MERGED"
-    [ -f $MERGED ] || samtools merge - "$@" >$MERGED
+    [ -f $MERGED ] || samtools merge - $INPUTBAMS >$MERGED
 fi
 
 #
@@ -90,6 +91,11 @@ echo "Sample prob: $SAMPLEPROB"
 #
 echo "Down-sampling"
 [ -f $OUTPUT ] || samtools view -s $SAMPLEPROB -b $FILTERED >$OUTPUT
+
+#
+# Tidy up
+#
+rm $FILTERED
 
 #
 # Index the resulting bam
