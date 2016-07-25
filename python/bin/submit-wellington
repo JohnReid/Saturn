@@ -30,5 +30,6 @@ cd $SATURNDIR/slurm
 for CELL in  $CELLS
 do
     echo $CELL
-    sbatch $SATURNDIR/python/bin/run-wellington $CELL
+    sbatch $SATURNDIR/python/bin/run-wellington $CELL relaxed
+    sbatch $SATURNDIR/python/bin/run-wellington $CELL conservative
 done
