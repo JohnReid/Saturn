@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 #
-# Submit a jobs to get positive and negative FASTA sequences for each TF
+# Submit jobs to get positive and negative FASTA sequences for each TF
 #
 
 TFS="
@@ -16,5 +16,5 @@ TFS="
 for TF in $TFS
 do
     echo $TF
-    qsub SLURM/get-fasta.slurm $TF
+    sbatch SLURM/get-fasta.slurm $TF
 done

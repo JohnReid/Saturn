@@ -1,4 +1,7 @@
 #!/bin/bash -e
+#
+# Submit jobs to merge the DNase bams for each cell type
+#
 
 CELLS="
     A549
@@ -17,8 +20,9 @@ CELLS="
     SK-N-SH
 "
 
+cd $SATURNDIR/slurm
 for CELL in  $CELLS
 do
     echo $CELL
-    qsub SLURM/dnase-merge.slurm $CELL
+    sbatch $SATURNDIR/python/bin/dnase-merge $CELL
 done

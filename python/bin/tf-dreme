@@ -1,27 +1,20 @@
 #!/bin/bash -e
-
 #
 # Run DREME on a TF's positive and negative sequences
 #
 
-#
-# Parse arguments
-#
-USAGE="USAGE: $0 <TF>"
-TF=${1?:$USAGE}
-
-#
-# sbatch directives begin here ###############################
-#
+#!
+#! sbatch directives begin here ###############################
+#!
 #SBATCH -p mrc-bsu-sand                 # Partition
-#SBATCH -J DREME-$TF                    # Name of the job
-#SBATCH -A MRC-BSU-SL2                  # Which project should be charged:
+#SBATCH -J DREME                        # Name of the job
+#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
 #SBATCH --nodes=1                       # How many whole nodes should be allocated?
 #SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
 #SBATCH --mem=04000                     # How many MB each node is allocated
 #SBATCH --time=66:00:00                 # How much wallclock time will be required?
-#SBATCH -o $SLURMDIR/dreme.$TF.%j.out   # stdout
-#SBATCH -e $SLURMDIR/dreme.$TF.%j.err   # stderr
+#SBATCH -o dreme-%j.out                 # stdout
+#SBATCH -e dreme-%j.out                 # stderr
 #SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
 ##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
                                         # interrupted by node failure or system downtime):
@@ -34,6 +27,12 @@ then
     module purge                               # Removes all modules still loaded
     module load default-impi                   # REQUIRED - loads the basic environment
 fi
+
+#
+# Parse arguments
+#
+USAGE="USAGE: $0 <TF>"
+TF=${1?:$USAGE}
 
 #
 # Set up variables
