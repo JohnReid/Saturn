@@ -58,7 +58,7 @@ fi
 echo "Output directory: $FOOTPRINTS"
 if [ -d $FOOTPRINTS ]
 then
-    echo "Output directory already exists not running: $OUTPUTDIR"
+    echo "Output directory already exists not running: $FOOTPRINTS"
     exit -1
 else
     mkdir -p $FOOTPRINTS
