@@ -36,9 +36,11 @@ export STEME_USE_GENOME_INDEX=1
 #
 # Set up variables
 #
+LABEL=$(basename $MOTIFSDIR)
 GENOME=$SATURNDIR/Data/annotations/hg19.chrs.fa
 MOTIFSXML=$MOTIFSDIR/dreme.xml
-MOTIFSMEME=$MOTIFSDIR/dreme.meme
+MOTIFSCONV=$MOTIFSDIR/dreme.meme
+MOTIFSMEME=$MOTIFSDIR/$LABEL.meme
 OUTPUTDIR=$MOTIFSDIR/genome-scan
 
 #
@@ -50,11 +52,26 @@ then
     exit -1
 fi
 
+#
+# Check input motifs is not empty
+#
+if [ ! -s $MOTIFSXML ]
+then
+    echo "Input motifs file is empty: $MOTIFSXML"
+    exit -1
+fi
+
 
 #
 # Convert motifs if necessary
 #
-[ -f "$MOTIFSMEME" ] || meme2meme $MOTIFSXML >$MOTIFSMEME
+[ -s "$MOTIFSCONV" ] || meme2meme $MOTIFSXML >$MOTIFSCONV
+[ -s "$MOTIFSMEME" ] || steme-mutate-motifs \
+    -p 1 \
+    -f "$LABEL-{idx:03d}-{name}" \
+    -a "{name}" \
+    $MOTIFSCONV \
+    >$MOTIFSMEME
 
 #
 # Scan the genome
