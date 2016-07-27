@@ -1,0 +1,77 @@
+#!/bin/bash -e
+#
+# Summarise DNase bigwig file by regions
+#
+
+#
+# Parse arguments
+#
+USAGE="USAGE: $0 <cell>"
+CELL=${1:?$USAGE}
+
+#
+# Set up variables
+#
+ANNOTATIONS=$SATURNDIR/Data/annotations
+INBED=$ANNOTATIONS/ladder_regions.blacklistfiltered.bed.gz
+PROCESSEDBED=$ANNOTATIONS/ladder_regions.processed.bed
+BW=$SATURNDIR/Data/DNASE/fold_coverage_wiggles/DNASE.$CELL.fc.signal.bigwig
+OUTPUTDIR=$SATURNDIR/Data/Features/DNase/
+OUTPUT=$OUTPUTDIR/DNase-$CELL-bw-summary.tab
+PROCESSEDOUTPUT=$OUTPUTDIR/DNase-$CELL-bw-summary.tsv
+#
+# Check files
+#
+if [ ! -s $INBED ]
+then
+    echo "BED does not exist: $INBED"
+    exit -1
+fi
+if [ ! -s $BW ]
+then
+    echo "BigWig does not exist: $BW"
+    exit -1
+fi
+[ -d $OUTPUTDIR ] || mkdir -p $OUTPUTDIR
+
+#
+# Process bed if necessary
+#
+if [ ! -s $PROCESSEDBED ]
+then
+    echo "Processing to: $PROCESSED"
+    zcat $INBED | awk '{printf("%-7s %-7s %-7s %s:%s-%s\n", $1, $2, $3, $1, $2, $3)}' >$PROCESSEDBED
+fi
+
+#
+# Run summary
+#
+if [ ! -s $OUTPUT ]
+then
+    echo "Writing to: $OUTPUT"
+    bigWigAverageOverBed -minMax $BW $PROCESSEDBED $OUTPUT
+fi
+
+#
+# Post-process output
+#
+if [ ! -s $PROCESSEDOUTPUT ]
+then
+    echo "Post-processing to: $PROCESSEDOUTPUT"
+    python -c "
+import sys
+while True:
+    line = sys.stdin.readline()
+    if not line:
+        break
+    fields = line.strip().split('\t')
+    region, size, covered, _sum, mean0, mean, _min, _max = fields
+    mean0 = float(mean0)
+    _min = float(_min)
+    _max = float(_max)
+    chrom, pos = region.split(':')
+    start, end = pos.split('-')
+    print '{}\t{}\t{}\t{}\t{}\t{}'.format(chrom, start, end, _min, mean0, _max)" <$OUTPUT >$PROCESSEDOUTPUT
+fi
+
+echo "Done: $CELL"
