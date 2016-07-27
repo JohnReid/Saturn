@@ -34,7 +34,7 @@ PROCESSEDBED=$ANNOTATIONS/test_regions.processed.bed
 BW=$SATURNDIR/Data/DNASE/fold_coverage_wiggles/DNASE.$CELL.fc.signal.bigwig
 OUTPUTDIR=$SATURNDIR/Data/Features/DNase/
 OUTPUT=$OUTPUTDIR/DNase-$CELL-bw-summary.tab
-PROCESSEDOUTPUT=$OUTPUTDIR/DNase-$CELL-bw-summary.tsv
+PROCESSEDOUTPUT=$OUTPUTDIR/DNase-$CELL-bw-summary.tsv.gz
 
 #
 # Check files
@@ -88,7 +88,8 @@ while True:
     _max = float(_max)
     chrom, pos = region.split(':')
     start, end = pos.split('-')
-    print '{}\t{}\t{}\t{}\t{}\t{}'.format(chrom, start, end, _min, mean0, _max)" <$OUTPUT >$PROCESSEDOUTPUT
+    print '{}\t{}\t{}\t{}\t{}\t{}'.format(chrom, start, end, _min, mean0, _max)" <$OUTPUT \
+    | gzip -c - >$PROCESSEDOUTPUT
 fi
 
 echo "Done: $CELL"
