@@ -1,0 +1,49 @@
+---
+title: "Get DNase features for a given cell type."
+author: John Reid
+output: html_document
+params:
+  cell: H1-hESC
+---
+
+```{r renderMe, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+if (FALSE) {
+    rmarkdown::render("feature-DNase.Rmd", params = list(cell = "H1-hESC"))
+} else {
+    for (cell in levels(cells$cell)) {
+        rmarkdown::render(
+            "feature-DNase.Rmd",
+            output_file = str_c('feature-DNase-', cell, '.html'),
+            params = list(cell = cell))
+    }
+}
+```
+
+# Load data
+
+Load the DNase data for `{r params$cell}`.
+```{r loadFeature}
+library(Saturn)
+cell <- params$cell
+dnase.summary  <- summarise.dnase(cell, type = 'relaxed')
+object.size(dnase.summary)
+```
+
+# Save data
+
+Write the summarised DNase data as a feature
+```{r writeFeature}
+feature.file <- file.path(saturn.data(), 'Features', 'DNase', str_c('dnase-summary-', cell, '.rds'))
+saveRDS(dnase.summary, feature.file)
+```
+
+# Session information
+
+```{r sessionInfo}
+date()
+devtools::session_info()
+```
