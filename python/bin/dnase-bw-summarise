@@ -35,6 +35,7 @@ BW=$SATURNDIR/Data/DNASE/fold_coverage_wiggles/DNASE.$CELL.fc.signal.bigwig
 OUTPUTDIR=$SATURNDIR/Data/Features/DNase/
 OUTPUT=$OUTPUTDIR/DNase-$CELL-bw-summary.tab
 PROCESSEDOUTPUT=$OUTPUTDIR/DNase-$CELL-bw-summary.tsv
+
 #
 # Check files
 #
