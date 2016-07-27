@@ -29,8 +29,8 @@ CELL=${1:?$USAGE}
 # Set up variables
 #
 ANNOTATIONS=$SATURNDIR/Data/annotations
-INBED=$ANNOTATIONS/ladder_regions.blacklistfiltered.bed.gz
-PROCESSEDBED=$ANNOTATIONS/ladder_regions.processed.bed
+INBED=$ANNOTATIONS/test_regions.blacklistfiltered.bed.gz
+PROCESSEDBED=$ANNOTATIONS/test_regions.processed.bed
 BW=$SATURNDIR/Data/DNASE/fold_coverage_wiggles/DNASE.$CELL.fc.signal.bigwig
 OUTPUTDIR=$SATURNDIR/Data/Features/DNase/
 OUTPUT=$OUTPUTDIR/DNase-$CELL-bw-summary.tab
@@ -55,7 +55,7 @@ fi
 #
 if [ ! -s $PROCESSEDBED ]
 then
-    echo "Processing to: $PROCESSED"
+    echo "Processing to: $PROCESSEDBED"
     zcat $INBED | awk '{printf("%-7s %-7s %-7s %s:%s-%s\n", $1, $2, $3, $1, $2, $3)}' >$PROCESSEDBED
 fi
 
