@@ -1,0 +1,144 @@
+---
+title: "Simple prediction script"
+author: John Reid
+output: html_document
+---
+
+```{r renderMe, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render("predict.Rmd")
+```
+
+Which TF will we predict on?
+```{r}
+tf <- 'ATF3'
+```
+
+Which cell types will we train and validate on?
+```{r cellTypes}
+cell.train <- c('HepG2', 'K562', 'H1-hESC')
+cell.valid <- c('HCT116')
+cell.all <- c(cell.train, cell.valid)
+```
+
+Choose training and validation chromosomes.
+```{r chooseValidation}
+chrs.train <- str_c('chr', c(3:6, 9:19, 22))
+chrs.valid <- c('chr2', 'chr7', 'chr20')
+```
+
+
+# Responses
+
+Load the binding data
+```{r loadBinding}
+chip <- load.chip.labels(tf)
+```
+
+
+# Features
+
+Load DNase features and determine which are non-zero
+```{r loadFeatures}
+dnase <- lapply(cell.all,
+                function(cell)
+                    readRDS(file.path(saturn.data(), 'Features', 'DNase',
+                                      str_c('dnase-summary-', cell, '.rds'))))
+names(dnase) <- cell.all
+non.zero <- lapply(dnase, function(x) x != 0)
+names(non.zero) <- cell.all
+non.zero.idxs <- list()
+start <- 1
+non.zero.idxs <- lapply(
+    non.zero,
+    function(nz) {
+        end <- start + sum(nz)
+        result <- list(start=start, end=end)
+        start <- end
+        result
+    })
+
+num.non.zero <- end - 1
+```
+We have `r num.non.zero` regions in total across training and validation.
+
+Create data.tables from the features and response, ignoring those regions without any DNase hits
+and those that are not in our training or validation sets.
+```{r mapFeatures}
+regions.for.cell <- function(cell) {
+    if (cell %in% cell.train) {
+        return(chrom(regions) %in% chrs.train)
+    } else {
+        stopifnot(cell %in% cell.valid)
+        return(chrom(regions) %in% chrs.valid)
+    }
+}
+cell.data.table <- function(cell) {
+    # Work out which regions to keep
+    keep <- non.zero[[cell]] & regions.for.cell(cell)
+    # Rify cell name for chip data
+    cell.r <- rify(cell)
+    # If we don't have the ChIP data use NA
+    if (cell.r %in% colnames(mcols(chip))) {
+        bound <- as.vector(mcols(chip)[[cell.r]][keep])
+    } else {
+        bound <- NA
+    }
+    # Return data.table
+    data.table(
+        cell  = cell,
+        chrom = as.vector(chrom(regions)[keep]),
+        start = start(regions)[as.vector(keep)],
+        dnase = as.vector(dnase[[cell]][keep]),
+        bound = bound)
+}
+dt <- rbindlist(lapply(names(dnase), cell.data.table))
+dt %>% sample_n(10)
+dim(dt)
+# dt %>% filter(chrom %in% chrs.valid) %>% sample_n(10)
+```
+
+Match features to regions and split training from validation (ignoring ambiguous training regions)
+```{r matchFeatures}
+dt.train <- dt %>%
+    filter(cell %in% cell.train, chrom %in% chrs.train, 2 != bound) %>%
+    mutate(bound = factor(ifelse(1 == bound, 'U', 'B')))
+dt.valid <- dt %>%
+    filter(cell %in% cell.valid, chrom %in% chrs.valid, 2 != bound) %>%
+    mutate(bound = factor(ifelse(1 == bound, 'U', 'B')))
+```
+Have `r nrow(dt.train)` training regions and `r nrow(dt.valid)`
+validation regions.
+
+
+# Fit
+
+Fit a logistic regression
+```{r fitLR}
+contrasts(dt.train$bound)
+fit <- glm(bound ~ dnase, family = binomial(link = 'logit'), data = dt.train)
+summary(fit)
+```
+
+
+# Validate
+
+```{r validate}
+predictions <- predict(fit, dt.valid)
+```
+
+```{r score}
+library(prg)
+labels <- dt.train$bound == 'B'
+scores <- predictions
+
+
+# Session information
+
+```{r sessionInfo}
+date()
+devtools::session_info()
+```
