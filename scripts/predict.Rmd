@@ -48,20 +48,7 @@ dnase <- lapply(cell.all,
                     readRDS(file.path(saturn.data(), 'Features', 'DNase',
                                       str_c('dnase-summary-', cell, '.rds'))))
 names(dnase) <- cell.all
-non.zero <- lapply(dnase, function(x) x != 0)
-names(non.zero) <- cell.all
-non.zero.idxs <- list()
-start <- 1
-non.zero.idxs <- lapply(
-    non.zero,
-    function(nz) {
-        end <- start + sum(nz)
-        result <- list(start=start, end=end)
-        start <- end
-        result
-    })
-
-num.non.zero <- end - 1
+num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
 ```
 We have `r num.non.zero` regions in total across training and validation.
 
@@ -105,10 +92,10 @@ Match features to regions and split training from validation (ignoring ambiguous
 ```{r matchFeatures}
 dt.train <- dt %>%
     filter(cell %in% cell.train, chrom %in% chrs.train, 2 != bound) %>%
-    mutate(bound = factor(ifelse(1 == bound, 'U', 'B')))
+    mutate(bound = factor(ifelse(1 == bound, 'U', 'B'), levels=c('U', 'B')))
 dt.valid <- dt %>%
     filter(cell %in% cell.valid, chrom %in% chrs.valid, 2 != bound) %>%
-    mutate(bound = factor(ifelse(1 == bound, 'U', 'B')))
+    mutate(bound = factor(ifelse(1 == bound, 'U', 'B'), levels=c('U', 'B')))
 ```
 Have `r nrow(dt.train)` training regions and `r nrow(dt.valid)`
 validation regions.
@@ -126,14 +113,25 @@ summary(fit)
 
 # Validate
 
-```{r validate}
+Make predictions on validation data
+```{r predict}
 predictions <- predict(fit, dt.valid)
 ```
 
-```{r score}
-library(prg)
+Assess quality of predictions
+```{r assess}
 labels <- dt.train$bound == 'B'
 scores <- predictions
+qplot(predictions)
+prg_curve = create_prg_curve(labels, scores)
+auprg = calc_auprg(prg_curve)
+convex_hull = prg_convex_hull(prg_curve)
+fig = plot_prg(prg_curve)
+# print(prg_curve)
+print(auprg)
+print(convex_hull)
+print(fig)
+```
 
 
 # Session information
