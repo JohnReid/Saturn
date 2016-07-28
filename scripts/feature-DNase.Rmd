@@ -12,7 +12,7 @@ params:
 #
 devtools::load_all()
 if (FALSE) {
-    rmarkdown::render("feature-DNase.Rmd", params = list(cell = "HCT116"))
+    rmarkdown::render("feature-DNase.Rmd", params = list(cell = "H1-hESC"))
 } else {
     for (cell in levels(cells$cell)) {
         rmarkdown::render(
