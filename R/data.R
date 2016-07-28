@@ -131,7 +131,7 @@ saturn.expr <- memoise::memoise(function(cell, biorep) {
 #'
 combine.chip.dnase <- function(chip.labels, dnase) {
   # Find the overlaps between the DNAse data and the ChIP labels
-  overlaps <- as.data.frame(findOverlaps(dnase, chip.labels))
+  overlaps <- as.data.frame(findOverlaps(dnase, chip.labels, ignore.strand = TRUE))
   # Add the p-values to the overlaps
   overlaps$dnase <- dnase[overlaps$queryHits,]$pValue
   # Summarise the overlaps by the maximum p-value for each ChIP label
@@ -157,29 +157,37 @@ load.chip.peaks <- memoise::memoise(function(cell, tf, type='conservative') {
 
 
 #' Load DNase peaks
-load.dnase.peaks <- function(cell, type='conservative') {
+load.dnase.peaks <- memoise::memoise(function(cell, type='conservative') {
   if ('conservative' == type) .type <- 'conservative.train'
   else .type <- type
   narrowpeak.granges(load.narrowpeak(
     file.path(saturn.data(), 'DNASE', 'peaks', type,
               str_c('DNASE.', cell, '.', type, '.narrowPeak.gz'))))
-}
+})
 
 #' Summarise DNase peaks by ChIP-regions
-summarise.dnase <- memoise::memoise(function(cell, type='conservative') {
+#'
+summarise.dnase <- function(cell, type='conservative', aggregation.fn=max) {
+  # Load the peaks
   dnase <- load.dnase.peaks(cell, type)
-  # Find the overlaps between the DNAse data and the ChIP regions
-  overlaps <- as.data.frame(findOverlaps(dnase, regions))
-  # Add the p-values to the overlaps
-  overlaps$dnase <- mcols(dnase)[overlaps$queryHits, 'pValue']
-  # Summarise the overlaps by the maximum p-value for each ChIP label
-  label.dnase <- overlaps %>%
+  # Aggregate
+  agg.by.region(dnase, regions, 'pValue', aggregation.fn)
+}
+
+#' Aggregate the named values in gr by region using the aggregation function.
+#'
+agg.by.region <- function(gr, regions, value.col, aggregation.fn=max) {
+  # Find the overlaps between the data and the regions
+  overlaps <- as.data.frame(findOverlaps(gr, regions, ignore.strand = TRUE))
+  # Add the values to the overlaps
+  overlaps$value <- mcols(gr)[overlaps$queryHits, value.col]
+  # Summarise the overlaps by the aggregated value for each region
+  region.values <- overlaps %>%
     group_by(subjectHits) %>%
-    summarise(dnase=max(dnase))
-  dnase <- Rle(0, length(regions))
-  dnase[label.dnase$subjectHits] <- label.dnase$dnase
-  dnase
-})
+    summarise(value=aggregation.fn(value))
+  # Return the result as a Rle vector
+  Rle.from.sparse(length(regions), region.values$subjectHits, region.values$value)
+}
 
 #' Binding for TF/cell type combination
 #'
