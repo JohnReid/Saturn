@@ -1,0 +1,57 @@
+---
+title: "Ladderboard, training and test regions"
+author: John Reid
+output: html_document
+---
+
+```{r renderMe, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render("regions.Rmd")
+```
+
+
+# Load
+
+Load the regions from the annotation directory.
+```{r load}
+library(Saturn)
+#
+# Ladder regions
+regions.ladder <- load.regions('ladder')
+object.size(regions.ladder)
+devtools::use_data(regions.ladder, overwrite = TRUE)
+#
+# Train regions
+regions.train <- load.regions('train')
+object.size(regions.train)
+devtools::use_data(regions.train, overwrite = TRUE)
+#
+# Test regions
+regions.test <- load.regions('test')
+object.size(regions.test)
+devtools::use_data(regions.test, overwrite = TRUE)
+```
+Have `r length(regions.ladder)` ladder regions, `r length(regions.train)` train regions and `r length(regions.test)`
+test regions.
+
+Double-check that the test regions are the union of the ladderboard and test regions.
+```{r}
+.union <- GenomicRanges::union(ranges.ladder(), ranges.train())
+stopifnot(length(GenomicRanges::setdiff(.union, ranges.test())) == 0)
+```
+
+Double-check that the ladderboard and train regions don't intersect.
+```{r}
+stopifnot(length(GenomicRanges::intersect(ranges.ladder(), ranges.train())) == 0)
+```
+
+
+# Session information
+
+`r date()`
+```{r sessionInfo}
+devtools::session_info()
+```
