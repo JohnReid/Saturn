@@ -123,14 +123,18 @@ read.chip.labels <- memoise::memoise(function(tf) {
   path <- tf.chip.labels.file(tf)
   message('Loading: ', path)
   # Read ChIP labels into data.table
-  labels.dt <- fread(str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE)
-  # Convert into S4Vectors::Dataframe usine Rle
+  labels.dt <-
+    fread(str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE) %>%
+    mutate(chr = factor(chr, levels = chrs.levels))
+  # Sort by chr then start
+  labels.dt <- labels.dt[order(chr, start)]
+  # Convert into S4Vectors::Dataframe using Rle
   # First convert binding factors
   label.cells <- colnames(labels.dt)[3:ncol(labels.dt)]
   binding.rles <- lapply(label.cells, function(l) Rle(factor(labels.dt[[l]], levels=binding.levels)))
   names(binding.rles) <- label.cells
   # Now convert chromosomes
-  df.args <- c(list(chrom=Rle(factor(labels.dt$chr, levels=chrs.levels)), start=labels.dt$start, check.names = FALSE), binding.rles)
+  df.args <- c(list(chrom=Rle(labels.dt$chr), start=labels.dt$start, check.names = FALSE), binding.rles)
   # Build DataFrame
   do.call(DataFrame, df.args)
 })
