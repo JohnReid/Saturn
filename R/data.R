@@ -10,7 +10,23 @@
   'qValue',
   'peak')
 
+cell.levels <- c(
+    'A549',
+    'GM12878',
+    'H1-hESC',
+    'HCT116',
+    'HeLa-S3',
+    'HepG2',
+    'IMR90',
+    'induced_pluripotent_stem_cell',
+    'K562',
+    'liver',
+    'MCF-7',
+    'Panc1',
+    'PC-3',
+    'SK-N-SH')
 chrs.levels <- c(str_c('chr', 1:22), 'chrX')
+binding.levels <- c('U', 'A', 'B')
 
 hg19 <- BSgenome.Hsapiens.UCSC.hg19
 
@@ -85,8 +101,43 @@ labels.granges <- function(labels) {
 }
 
 
+#' Convert a ChIP-seq labels data frame to GRanges.
+labels.granges <- function(labels) {
+  mcol.names <- names(labels)[4:ncol(labels)]
+  .args = lapply(labels[,mcol.names], function(x) Rle(as.integer(x)))
+  .args$seqnames = Rle(labels$chr)
+  .args$ranges = IRanges(start = labels$start+1, end = labels$stop)
+  .args$seqinfo = seqinfo(hg19)
+  do.call(GRanges, args = .args)
+}
+
+
+#' The file with the TF's binding labels
+#'
+tf.chip.labels.file <- function(tf)
+  file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz'))
+
+#' Read the ChIP binding labels for the TF into a S4Vectors::DataFrame
+#'
+read.chip.labels <- memoise::memoise(function(tf) {
+  path <- tf.chip.labels.file(tf)
+  message('Loading: ', path)
+  # Read ChIP labels into data.table
+  labels.dt <- fread(str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE)
+  # Convert into S4Vectors::Dataframe usine Rle
+  # First convert binding factors
+  label.cells <- colnames(labels.dt)[3:ncol(labels.dt)]
+  binding.rles <- lapply(label.cells, function(l) Rle(factor(labels.dt[[l]], levels=binding.levels)))
+  names(binding.rles) <- label.cells
+  # Now convert chromosomes
+  df.args <- c(list(chrom=Rle(factor(labels.dt$chr, levels=chrs.levels)), start=labels.dt$start, check.names = FALSE), binding.rles)
+  # Build DataFrame
+  do.call(DataFrame, df.args)
+})
+
+
 #' Read ChIP-seq labels into data frame
-read.chip.labels <- function(tf) {
+read.chip.labels.old <- function(tf) {
   path <- file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz'))
   message('Loading: ', path)
   res <- readr::read_tsv(
@@ -165,13 +216,53 @@ load.dnase.peaks <- memoise::memoise(function(cell, type='conservative') {
               str_c('DNASE.', cell, '.', type, '.narrowPeak.gz'))))
 })
 
+
+#' Load regions from annotations
+#'
+load.regions <- function(name) {
+    file <- file.path(saturn.data(), 'annotations', str_c(name, '_regions.blacklistfiltered.bed.gz'))
+    # sort(import(file, seqinfo=seqinfo(hg19)))
+    df <-
+       readr::read_tsv(file, col_names = c('chrom', 'start', 'end'), progress = FALSE) %>%
+       select(-end) %>%
+       mutate(chrom = factor(chrom, levels = chrs.levels)) %>%
+       arrange(chrom, start)
+    S4Vectors::DataFrame(chrom = Rle(df$chrom), start = df$start)
+}
+
+
+#' Convert regions to ranges
+#'
+regions.to.ranges <- function(regions) GRanges(
+  GRanges(
+    seqnames = regions$chrom,
+    ranges = IRanges(start = regions$start, width = 200),
+    strand = '*',
+    seqinfo = seqinfo(hg19)))
+
+
+#' The ladderboard ranges
+#'
+ranges.ladder <- memoise::memoise(function() regions.to.ranges(regions.ladder))
+
+
+#' The test ranges
+#'
+ranges.test <- memoise::memoise(function() regions.to.ranges(regions.test))
+
+
+#' The training ranges
+#'
+ranges.train <- memoise::memoise(function() regions.to.ranges(regions.train))
+
+
 #' Summarise DNase peaks by ChIP-regions
 #'
 summarise.dnase <- function(cell, type='conservative', aggregation.fn=max) {
   # Load the peaks
   dnase <- load.dnase.peaks(cell, type)
   # Aggregate
-  agg.by.region(dnase, regions, 'pValue', aggregation.fn)
+  agg.by.region(dnase, ranges.test(), 'pValue', aggregation.fn)
 }
 
 #' Aggregate the named values in gr by region using the aggregation function.
