@@ -48,6 +48,7 @@ object.size(hits)
 motifs <- levels(hits$motif)
 features <- lapply(motifs,
   function(m) {
+    message('Motif: ', m)
     # Separate into motifs
     motif.hits <- hits %>% filter(motif == m) %>% select(-motif)
     # Convert to GRanges
@@ -57,17 +58,12 @@ features <- lapply(motifs,
         ranges = IRanges(start = start, width = str_length(w.mer)),
         strand = strand,
         seqinfo = seqinfo(hg19)))
-    object.size(hits.gr)
-    length(hits.gr)
-    length(motif.hits$Z)
     # Find overlaps with test ranges
     overlaps <- as.data.frame(findOverlaps(ranges.test(), hits.gr, ignore.strand = TRUE))
-    colnames(overlaps)
     overlaps$value <- motif.hits$Z[overlaps$subjectHits]
-    system.time(Z.max <- with(
+    with(
       aggregate(overlaps %>% select(-subjectHits), list(overlaps$queryHits), max),
-      Rle.from.sparse(length(ranges.test()), queryHits, value)))
-    Z.max
+      Rle.from.sparse(length(ranges.test()), queryHits, value))
   })
 names(features) <- motifs
 
