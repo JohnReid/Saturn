@@ -30,6 +30,39 @@ binding.levels <- c('U', 'A', 'B')
 
 hg19 <- BSgenome.Hsapiens.UCSC.hg19
 
+
+#' Convert from Rle to one column matrix
+#'
+setAs("Rle", "Matrix", function(from) {
+    rv <- runValue(from)
+    nz <- rv != 0
+    i <- as.integer(ranges(from)[nz])
+    x <- rep(rv[nz], runLength(from)[nz])
+    sparseMatrix(i=i, p=c(0L, length(x)), x=x, dims=c(length(from), 1))
+})
+
+
+#' Convert from DataFrame of Rle to sparse Matrix
+#'
+#' Conversion from DataFrame of Rle to sparse Matrix
+#' from: https://support.bioconductor.org/p/66586/#85609
+#'
+setAs("DataFrame", "Matrix", function(from) {
+  mat = do.call(cbind, lapply(from, as, "Matrix"))
+  colnames(mat) <- colnames(from)
+  rownames(mat) <- rownames(from)
+  mat
+})
+
+
+#' Retrieve N largest objects in global environment.
+#'
+largest.objects <- function(N = 10) {
+  z <- sapply(ls(envir = globalenv()), function(x) object.size(get(x, envir = globalenv())))
+  as.matrix(rev(sort(z))[1:N])
+}
+
+
 #' Make names suitable for R.
 #'
 #' E.g. substitute '_' for '-'
@@ -119,25 +152,58 @@ tf.chip.labels.file <- function(tf)
 
 #' Read the ChIP binding labels for the TF into a S4Vectors::DataFrame
 #'
-read.chip.labels <- memoise::memoise(function(tf) {
+# read.chip.labels <- memoise::memoise(function(tf) {
+read.chip.labels <- (function(tf) {
   path <- tf.chip.labels.file(tf)
   message('Loading: ', path)
   # Read ChIP labels into data.table
-  labels.dt <-
-    fread(str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE) %>%
-    mutate(chr = factor(chr, levels = chrs.levels))
-  # Sort by chr then start
-  labels.dt <- labels.dt[order(chr, start)]
+  labels.dt <- fread(str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE) %>% rename(chrom = chr)
+  # Make chrom into a factor with correct levels
+  labels.dt$chrom <- factor(labels.dt$chrom, levels = chrs.levels)
+  # Sort by chrom then start
+  setkey(labels.dt, chrom, start)
   # Convert into S4Vectors::Dataframe using Rle
   # First convert binding factors
   label.cells <- colnames(labels.dt)[3:ncol(labels.dt)]
   binding.rles <- lapply(label.cells, function(l) Rle(factor(labels.dt[[l]], levels=binding.levels)))
   names(binding.rles) <- label.cells
   # Now convert chromosomes
-  df.args <- c(list(chrom=Rle(labels.dt$chr), start=labels.dt$start, check.names = FALSE), binding.rles)
+  df.args <- c(list(chrom=Rle(labels.dt$chrom), start=labels.dt$start, check.names = FALSE), binding.rles)
+  # Check the labels are ordered exactly the same as the test regions
+  stopifnot(all(df.args$chrom == regions.train$chrom))
+  stopifnot(all(df.args$start == regions.train$start))
   # Build DataFrame
   do.call(DataFrame, df.args)
 })
+
+
+#' Melt ChIP data into long format
+#'
+chip.melt <- function(chip) {
+  # Melt the binding vector
+  binding.m <- do.call(c, lapply(colnames(chip)[3:ncol(chip)], function(col) chip[[col]]))
+  # Melt the cell names
+  cells.m <- do.call(
+      c,
+      lapply(colnames(chip)[3:ncol(chip)],
+              function(col) Rle(factor(col, levels = cell.levels), nrow(chip))))
+  # Create DataFrame
+  DataFrame(
+    cell  = cells.m,
+    chrom = rep(chip$chrom, ncol(chip) - 2),
+    start = rep(chip$start, ncol(chip) - 2),
+    bound = binding.m)
+}
+
+#' Convert melted ChIP data into data.table
+#'
+chip.data.table <- function(chip.m) setkey(
+  data.table(
+    cell  = as.factor(chip.m$cell),
+    chrom = as.factor(chip.m$chrom),
+    start = as.vector(chip.m$start),
+    bound = as.factor(chip.m$bound)),
+  cell, chrom, start)
 
 
 #' Read ChIP-seq labels into data frame
