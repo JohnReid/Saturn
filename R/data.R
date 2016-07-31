@@ -25,10 +25,10 @@ cell.levels <- c(
     'Panc1',
     'PC-3',
     'SK-N-SH')
-chrs.levels <- c(str_c('chr', 1:22), 'chrX')
+chrs.levels <- c(stringr::str_c('chr', 1:22), 'chrX')
 binding.levels <- c('U', 'A', 'B')
 
-hg19 <- BSgenome.Hsapiens.UCSC.hg19
+hg19 <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
 
 
 #' Convert from Rle to one column matrix
@@ -67,7 +67,7 @@ largest.objects <- function(N = 10) {
 #'
 #' E.g. substitute '_' for '-'
 #'
-rify <- function(x) str_replace_all(x, '[-{}]', '_')
+rify <- function(x) stringr::str_replace_all(x, '[-{}]', '_')
 
 
 #' Which string matches
@@ -148,7 +148,7 @@ labels.granges <- function(labels) {
 #' The file with the TF's binding labels
 #'
 tf.chip.labels.file <- function(tf)
-  file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz'))
+  file.path(saturn.data(), 'ChIPseq', 'labels', stringr::str_c(tf, '.train.labels.tsv.gz'))
 
 #' Read the ChIP binding labels for the TF into a S4Vectors::DataFrame
 #'
@@ -157,7 +157,7 @@ read.chip.labels <- (function(tf) {
   path <- tf.chip.labels.file(tf)
   message('Loading: ', path)
   # Read ChIP labels into data.table
-  labels.dt <- fread(str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE) %>% rename(chrom = chr)
+  labels.dt <- fread(stringr::str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE) %>% rename(chrom = chr)
   # Make chrom into a factor with correct levels
   labels.dt$chrom <- factor(labels.dt$chrom, levels = chrs.levels)
   # Sort by chrom then start
@@ -208,7 +208,7 @@ chip.data.table <- function(chip.m) setkey(
 
 #' Read ChIP-seq labels into data frame
 read.chip.labels.old <- function(tf) {
-  path <- file.path(saturn.data(), 'ChIPseq', 'labels', str_c(tf, '.train.labels.tsv.gz'))
+  path <- file.path(saturn.data(), 'ChIPseq', 'labels', stringr::str_c(tf, '.train.labels.tsv.gz'))
   message('Loading: ', path)
   res <- readr::read_tsv(
     path, progress = FALSE,
@@ -273,7 +273,7 @@ load.chip.peaks <- memoise::memoise(function(cell, tf, type='conservative') {
   else .type <- type
   narrowpeak.granges(load.narrowpeak(
     file.path(saturn.data(), 'ChIPseq', 'peaks', type,
-              str_c('ChIPseq.', cell, '.', tf, '.', .type, '.narrowPeak.gz'))))
+              stringr::str_c('ChIPseq.', cell, '.', tf, '.', .type, '.narrowPeak.gz'))))
 })
 
 
@@ -283,14 +283,14 @@ load.dnase.peaks <- memoise::memoise(function(cell, type='conservative') {
   else .type <- type
   narrowpeak.granges(load.narrowpeak(
     file.path(saturn.data(), 'DNASE', 'peaks', type,
-              str_c('DNASE.', cell, '.', type, '.narrowPeak.gz'))))
+              stringr::str_c('DNASE.', cell, '.', type, '.narrowPeak.gz'))))
 })
 
 
 #' Load regions from annotations
 #'
 load.regions <- function(name) {
-    file <- file.path(saturn.data(), 'annotations', str_c(name, '_regions.blacklistfiltered.bed.gz'))
+    file <- file.path(saturn.data(), 'annotations', stringr::str_c(name, '_regions.blacklistfiltered.bed.gz'))
     # sort(import(file, seqinfo=seqinfo(hg19)))
     df <-
        readr::read_tsv(file, col_names = c('chrom', 'start', 'end'), progress = FALSE) %>%
@@ -382,7 +382,7 @@ load.motif.scan <- memoise::memoise(function(
       p.value = col_double())) %>%
     mutate(motif = rify(motif),
            chr = motif.seqs$ID[seq+1],
-           end = position + str_length(w.mer),
+           end = position + stringr::str_length(w.mer),
            logBF = Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF),
            neg.log.p = -log10(p.value)) %>%
   group_by(motif) %>%

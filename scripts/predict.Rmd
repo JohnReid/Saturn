@@ -26,7 +26,7 @@ cell.all <- c(cell.train, cell.valid)
 
 Choose training and validation chromosomes.
 ```{r chooseValidation}
-chrs.train <- str_c('chr', c(3:6, 9:19, 22))
+chrs.train <- stringr::str_c('chr', c(3:6, 9:19, 22))
 chrs.valid <- c('chr2', 'chr7', 'chr20')
 ```
 
@@ -50,7 +50,7 @@ dnase <-
     cell.all,
     function(cell) readRDS(file.path(
       saturn.data(), 'Features', 'DNase',
-      str_c('dnase-summary-', cell, '.rds'))))
+      stringr::str_c('dnase-summary-', cell, '.rds'))))
 names(dnase) <- cell.all
 non.zero <- lapply(dnase, function(x) x != 0)
 names(non.zero) <- cell.all
