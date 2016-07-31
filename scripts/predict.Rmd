@@ -33,24 +33,15 @@ chrs.valid <- c('chr2', 'chr7', 'chr20')
 
 # Responses
 
-Load the binding data and melt to long format
+Load the binding data
 ```{r loadBinding}
 chip <- read.chip.labels(tf)
-binding.m <- do.call(c, lapply(colnames(chip)[3:ncol(chip)], function(col) chip[[col]]))
-cells.m <- do.call(
-  c,
-  lapply(colnames(chip)[3:ncol(chip)],
-         function(col) Rle(factor(col, levels = cell.levels), nrow(chip))))
-chip.df <- DataFrame(
-  cell = cells.m,
-  chrom = rep(chip$chrom, ncol(chip) - 2),
-  start = rep(chip$start, ncol(chip) - 2),
-  bound = binding.m)
-object.size(chip.df)
 ```
 
 
 # Features
+
+## DNase
 
 Load DNase features and determine which are non-zero
 ```{r loadFeatures}
@@ -67,6 +58,29 @@ num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
 ```
 We have `r num.non.zero` DNase regions in total across training and validation.
 
+
+## Motif features
+
+Load motif features for regions with non-zero DNase
+```{r loadMotifFeatures}
+motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', 'Known')
+motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
+#
+# Load Rle motif scores for each motif
+motif.features <- lapply(
+  1:nrow(motifs.meta),
+  function(i) readRDS(motifs.meta$feature.file[i]))
+names(motif.features) <- motifs.meta$motif
+filter.motif.features <- function(keep) {
+  motif.keep <- lapply(motif.features, function(f) f[keep])
+  names(motif.keep) <- names(motif.features)
+  do.call(S4Vectors::DataFrame, motif.keep)
+}
+```
+
+
+# Wrangle
+
 Create data from the features and response, ignoring those regions without any DNase hits
 and those that are not in our training or validation sets.
 ```{r mapFeatures}
@@ -81,46 +95,57 @@ regions.for.cell <- function(cell) {
     }
 }
 cell.data <- function(cell) {
+    message('Wrangling data for: ', cell)
     # Work out which regions to keep
     keep <- non.zero[[cell]] & regions.for.cell(cell)
     # Return S4Vectors::DataFrame
-    DataFrame(
+    cbind(
+      DataFrame(
         cell  = Rle(factor(cell, levels = cell.levels)),
         chrom = Rle(regions.test$chrom[keep]),
         start = regions.test$start[as.vector(keep)],
-        dnase = Rle(dnase[[cell]][keep]))
+        dnase = Rle(dnase[[cell]][keep]),
+        bound = chip[[cell]][keep[regions.train$test.idx]]),
+      filter.motif.features(keep))
 }
 df <- Reduce(rbind, lapply(names(dnase), cell.data))
 sapply(df, class)
 object.size(df)
 ```
 
-Join the data with the binding data
-```{r joinBinding}
-system.time(dt <- setkey(as.data.table(df), cell, chrom, start)[setkey(as.data.table(chip.df), cell, chrom, start), nomatch=0])
-```
+
+# Training/validation split
 
 Match features to regions and split training from validation (ignoring ambiguous training regions)
 ```{r matchFeatures}
-subset(dt, cell %in% cell.train, chrom %in% chrs.train, 2 != bound)
-dt.train <- dt %>%
-    filter(cell %in% cell.train, chrom %in% chrs.train, 'A' != bound) %>%
-    mutate(bound = factor(ifelse('U' == bound, 'U', 'B'), levels=c('U', 'B')))
-dt.valid <- dt %>%
-    filter(cell %in% cell.valid, chrom %in% chrs.valid, 'A' != bound) %>%
-    mutate(bound = factor(ifelse('U' == bound, 'U', 'B'), levels=c('U', 'B')))
+df.train <- df[df$cell %in% cell.train & df$chrom %in% chrs.train & 'A' != df$bound,]
+df.train$bound <- Rle(ifelse('U' == df.train$bound, 0, 1))
+df.valid <- df[df$cell %in% cell.valid & df$chrom %in% chrs.valid & 'A' != df$bound,]
+df.valid$bound <- Rle(ifelse('U' == df.valid$bound, 0, 1))
 ```
-Have `r nrow(dt.train)` training regions and `r nrow(dt.valid)`
+Have `r nrow(df.train)` training regions and `r nrow(df.valid)`
 validation regions.
 
 
 # Fit
 
+Convert the Rle DataFrames to sparse matrices
+```{r sparse}
+mat.train <- as(subset(df.train, select = -c(cell, chrom, start, bound)), "Matrix")
+mat.valid <- as(subset(df.valid, select = -c(cell, chrom, start, bound)), "Matrix")
+```
+
 Fit a logistic regression
 ```{r fitLR}
-contrasts(dt.train$bound)
-fit <- glm(bound ~ dnase, family = binomial(link = 'logit'), data = dt.train)
-summary(fit)
+library(glmnet)
+# system.time(fit <- glm(bound ~ ., family = binomial(link = 'logit'), data = mat.train))
+glmnet.y <- factor(ifelse(df.train$bound, 'B', 'U'), levels=c('U', 'B'))
+system.time(cvfit <- cv.glmnet(mat.glmnet, glmnet.y, family = 'binomial'))
+summary(cvfit)
+plot(cvfit)
+cvfit$lambda.min
+coef(cvfit, s = "lambda.min")
+coef(cvfit, s = "lambda.1se")
 ```
 
 
@@ -128,20 +153,18 @@ summary(fit)
 
 Make predictions on validation data
 ```{r predict}
-predictions <- predict(fit, dt.valid)
-aggregate(predictions, dt.valid$bound, mean)
-aggregate(predictions, dt.valid$bound, sd)
-qplot(predictions)
-sd(predictions['U' == dt.valid$bound])
-sd(predictions['B' == dt.valid$bound])
+predictions <- predict(cvfit, mat.valid, s = "lambda.min")
+predictions <- predict(cvfit, mat.valid, s = "lambda.1se")
+dim(predictions)
 ```
 
 Assess quality of predictions
 ```{r assess}
-labels <- ifelse(dt.valid$bound == 'B', 1, 0)
+labels <- as.vector(df.valid$bound)
+scores <- predictions[,1]
 length(labels)
-length(predictions)
-prg_curve = create_prg_curve(labels, predictions)
+length(scores)
+prg_curve = create_prg_curve(labels, scores)
 auprg = calc_auprg(prg_curve)
 convex_hull = prg_convex_hull(prg_curve)
 fig = plot_prg(prg_curve)
@@ -154,7 +177,12 @@ print(fig)
 
 # Session information
 
+`r date()`
 ```{r sessionInfo}
-date()
 devtools::session_info()
+```
+
+Largest objects in memory
+```{r largestObjects}
+largest.objects()
 ```
