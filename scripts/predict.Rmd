@@ -100,7 +100,7 @@ cell.data <- function(cell) {
     keep <- non.zero[[cell]] & regions.for.cell(cell)
     # Return S4Vectors::DataFrame
     cbind(
-      DataFrame(
+      S4Vectors::DataFrame(
         cell  = Rle(factor(cell, levels = cell.levels)),
         chrom = Rle(regions.test$chrom[keep]),
         start = regions.test$start[as.vector(keep)],
@@ -137,10 +137,9 @@ mat.valid <- as(subset(df.valid, select = -c(cell, chrom, start, bound)), "Matri
 
 Fit a logistic regression
 ```{r fitLR}
-library(glmnet)
 # system.time(fit <- glm(bound ~ ., family = binomial(link = 'logit'), data = mat.train))
 glmnet.y <- factor(ifelse(df.train$bound, 'B', 'U'), levels=c('U', 'B'))
-system.time(cvfit <- cv.glmnet(mat.glmnet, glmnet.y, family = 'binomial'))
+system.time(cvfit <- glmnet::cv.glmnet(mat.train, glmnet.y, family = 'binomial'))
 summary(cvfit)
 plot(cvfit)
 cvfit$lambda.min
@@ -164,10 +163,10 @@ labels <- as.vector(df.valid$bound)
 scores <- predictions[,1]
 length(labels)
 length(scores)
-prg_curve = create_prg_curve(labels, scores)
-auprg = calc_auprg(prg_curve)
-convex_hull = prg_convex_hull(prg_curve)
-fig = plot_prg(prg_curve)
+prg_curve = prg::create_prg_curve(labels, scores)
+auprg = prg::calc_auprg(prg_curve)
+convex_hull = prg::prg_convex_hull(prg_curve)
+fig = prg::plot_prg(prg_curve)
 # print(prg_curve)
 print(auprg)
 print(convex_hull)

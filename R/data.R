@@ -38,7 +38,7 @@ setAs("Rle", "Matrix", function(from) {
     nz <- rv != 0
     i <- as.integer(ranges(from)[nz])
     x <- rep(rv[nz], runLength(from)[nz])
-    sparseMatrix(i=i, p=c(0L, length(x)), x=x, dims=c(length(from), 1))
+    Matrix::sparseMatrix(i=i, p=c(0L, length(x)), x=x, dims=c(length(from), 1))
 })
 
 
@@ -110,7 +110,7 @@ load.narrowpeak <- function(path) {
 #' Convert a narrowPeak data frame to GRanges.
 narrowpeak.granges <- function(narrowpeak) with(narrowpeak,
   GRanges(
-    seqnames = Rle(chrom),
+    seqnames = S4Vectors::Rle(chrom),
     ranges = IRanges(start = chromStart+1, end = chromEnd),
     seqinfo = seqinfo(hg19),
     signal = signalValue,
@@ -126,8 +126,8 @@ binding.as.numeric <- function(binding) ifelse('B' == binding, 1, ifelse('A' == 
 #' Convert a ChIP-seq labels data frame to GRanges.
 labels.granges <- function(labels) {
   mcol.names <- names(labels)[4:ncol(labels)]
-  .args = lapply(labels[,mcol.names], function(x) Rle(as.integer(x)))
-  .args$seqnames = Rle(labels$chr)
+  .args = lapply(labels[,mcol.names], function(x) S4Vectors::Rle(as.integer(x)))
+  .args$seqnames = S4Vectors::Rle(labels$chr)
   .args$ranges = IRanges(start = labels$start+1, end = labels$stop)
   .args$seqinfo = seqinfo(hg19)
   do.call(GRanges, args = .args)
@@ -137,8 +137,8 @@ labels.granges <- function(labels) {
 #' Convert a ChIP-seq labels data frame to GRanges.
 labels.granges <- function(labels) {
   mcol.names <- names(labels)[4:ncol(labels)]
-  .args = lapply(labels[,mcol.names], function(x) Rle(as.integer(x)))
-  .args$seqnames = Rle(labels$chr)
+  .args = lapply(labels[,mcol.names], function(x) S4Vectors::Rle(as.integer(x)))
+  .args$seqnames = S4Vectors::Rle(labels$chr)
   .args$ranges = IRanges(start = labels$start+1, end = labels$stop)
   .args$seqinfo = seqinfo(hg19)
   do.call(GRanges, args = .args)
@@ -157,23 +157,23 @@ read.chip.labels <- (function(tf) {
   path <- tf.chip.labels.file(tf)
   message('Loading: ', path)
   # Read ChIP labels into data.table
-  labels.dt <- fread(stringr::str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE) %>% rename(chrom = chr)
+  labels.dt <- data.table::fread(stringr::str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE) %>% rename(chrom = chr)
   # Make chrom into a factor with correct levels
   labels.dt$chrom <- factor(labels.dt$chrom, levels = chrs.levels)
   # Sort by chrom then start
-  setkey(labels.dt, chrom, start)
+  data.table::setkey(labels.dt, chrom, start)
   # Convert into S4Vectors::Dataframe using Rle
   # First convert binding factors
   label.cells <- colnames(labels.dt)[3:ncol(labels.dt)]
-  binding.rles <- lapply(label.cells, function(l) Rle(factor(labels.dt[[l]], levels=binding.levels)))
+  binding.rles <- lapply(label.cells, function(l) S4Vectors::Rle(factor(labels.dt[[l]], levels=binding.levels)))
   names(binding.rles) <- label.cells
   # Now convert chromosomes
-  df.args <- c(list(chrom=Rle(labels.dt$chrom), start=labels.dt$start, check.names = FALSE), binding.rles)
+  df.args <- c(list(chrom=S4Vectors::Rle(labels.dt$chrom), start=labels.dt$start, check.names = FALSE), binding.rles)
   # Check the labels are ordered exactly the same as the test regions
   stopifnot(all(df.args$chrom == regions.train$chrom))
   stopifnot(all(df.args$start == regions.train$start))
   # Build DataFrame
-  do.call(DataFrame, df.args)
+  do.call(S4Vectors::DataFrame, df.args)
 })
 
 
@@ -186,7 +186,7 @@ chip.melt <- function(chip) {
   cells.m <- do.call(
       c,
       lapply(colnames(chip)[3:ncol(chip)],
-              function(col) Rle(factor(col, levels = cell.levels), nrow(chip))))
+              function(col) S4Vectors::Rle(factor(col, levels = cell.levels), nrow(chip))))
   # Create DataFrame
   DataFrame(
     cell  = cells.m,
@@ -197,7 +197,7 @@ chip.melt <- function(chip) {
 
 #' Convert melted ChIP data into data.table
 #'
-chip.data.table <- function(chip.m) setkey(
+chip.data.table <- function(chip.m) data.table::setkey(
   data.table(
     cell  = as.factor(chip.m$cell),
     chrom = as.factor(chip.m$chrom),
@@ -297,7 +297,7 @@ load.regions <- function(name) {
        select(-end) %>%
        mutate(chrom = factor(chrom, levels = chrs.levels)) %>%
        arrange(chrom, start)
-    S4Vectors::DataFrame(chrom = Rle(df$chrom), start = df$start)
+    S4Vectors::DataFrame(chrom = S4Vectors::Rle(df$chrom), start = df$start)
 }
 
 
@@ -388,7 +388,7 @@ load.motif.scan <- memoise::memoise(function(
   group_by(motif) %>%
   do(gr = with(.,
     GRanges(
-      seqnames = Rle(chr),
+      seqnames = S4Vectors::Rle(chr),
       ranges = IRanges(start = position+1, end = end),
       strand = strand,
       seqinfo = seqinfo(hg19),
@@ -415,7 +415,7 @@ Z.to.log.BF <- function(Z, prior.log.odds = .PRIOR.LOG.ODDS, maximum = 10) {
 #'
 sparse.to.rle <- function(len, idxs, x) {
   warning("This function (sparse.to.rle) has been deprecated. Rle.from.sparse is much more efficient.")
-  res <- Rle(0, len)
+  res <- S4Vectors::Rle(0, len)
   res[idxs] <- x
   res
 }
@@ -447,7 +447,7 @@ Rle.from.sparse <- function(len, idxs, x) {
   # Which lengths are positive?
   pos.lens <- .lens > 0
   # Some of the lengths will be zero, ignore them and their values
-  Rle(.vals[pos.lens], .lens[pos.lens])
+  S4Vectors::Rle(.vals[pos.lens], .lens[pos.lens])
 }
 
 
