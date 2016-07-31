@@ -5,21 +5,24 @@ Authors@R: c(person("John", "Reid", role = c("aut", "cre"),
                     email = "johnbaronreid@gmail.com"))
 Description: Model TF-binding in the DREAM-ENCODE challenge.
 Depends: R (>= 3.2.5),
-    GenomicRanges,
-    BSgenome.Hsapiens.UCSC.hg19,
-    rtracklayer,
+    GenomicRanges (>= 1.22.4),
+    dplyr (>= 0.5.0.9000),
+    reshape2 (>= 1.4.1),
+    dtplyr (>= 0.0.1)
+Imports:
+    BSgenome.Hsapiens.UCSC.hg19 (>= 1.4.0),
+    rtracklayer (>= 1.30.4),
+    Matrix (>= 1.2-5),
+    glmnet (>= 2.0-5),
     readr (>= 0.2.2.9),
-    dplyr,
-    reshape2,
     data.table (>= 1.9.6),
-    dtplyr,
-    prg,
-    ggplot2,
-    ggthemes,
-    stringr,
-    testthat,
-    memoise,
-    rmarkdown
+    prg (>= 0.5.1),
+    ggplot2 (>= 2.1.0),
+    ggthemes (>= 3.0.3),
+    stringr (>= 1.0.0),
+    testthat (>= 1.0.2),
+    memoise (>= 1.0.0),
+    rmarkdown (>= 0.9.6)
 License: MIT
 Encoding: UTF-8
 LazyData: true
