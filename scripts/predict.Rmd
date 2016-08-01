@@ -181,8 +181,8 @@ Write predictions in format needed for submission
 out <- data.frame(
   chrom = df.valid$chrom,
   start = df.valid$start,
-  end   = df.valid$start + 200,
-  pred  = logit.inv(predictions))
+  end   = as.integer(df.valid$start + 200),
+  pred  = logit.inv(predictions[,1]))
 predictions.file <- 'predictions.tsv'
 readr::write_tsv(out, predictions.file, col_names = FALSE)
 ```
