@@ -69,7 +69,7 @@ motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
 # Load Rle motif scores for each motif
 motif.features <- lapply(
   1:nrow(motifs.meta),
-  function(i) readRDS(motifs.meta$feature.file[i]))
+  function(i) readRDS(file.path(motif.feature.dir, basename(motifs.meta$feature.file[i]))))
 names(motif.features) <- motifs.meta$motif
 filter.motif.features <- function(keep) {
   motif.keep <- lapply(motif.features, function(f) f[keep])
