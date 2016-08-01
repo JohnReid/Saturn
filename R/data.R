@@ -27,6 +27,7 @@ cell.levels <- c(
     'SK-N-SH')
 chrs.levels <- c(stringr::str_c('chr', 1:22), 'chrX')
 binding.levels <- c('U', 'A', 'B')
+tf.levels <- levels(tfs$TF)
 
 hg19 <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
 
