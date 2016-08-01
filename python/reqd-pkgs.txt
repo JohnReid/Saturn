@@ -1,6 +1,7 @@
 jupyter
 h5py
 pandas
+rpy2
 sklearn
 keras
 pyzmq
