@@ -1,3 +1,4 @@
+docopt
 jupyter
 h5py
 pandas
