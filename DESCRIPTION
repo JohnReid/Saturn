@@ -22,7 +22,8 @@ Imports:
     stringr (>= 1.0.0),
     testthat (>= 1.0.2),
     memoise (>= 1.0.0),
-    rmarkdown (>= 0.9.6)
+    rmarkdown (>= 0.9.6),
+    docopt (>= 0.4.5)
 License: MIT
 Encoding: UTF-8
 LazyData: true

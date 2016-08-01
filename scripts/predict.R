@@ -1,50 +1,66 @@
----
-title: "Simple prediction script"
-author: John Reid
-output: html_document
----
+#!/usr/bin/env Rscript
+#
+# Simple prediction script
+#
+"Usage: predict.R TF VALIDATIONCELL
+-o --output DIR  specify output directory [default: ./predictions]
+-l --ladder      Use ladder cell types [default: FALSE]
+-s --submit      Use submissiong cell types [default: FALSE]" -> doc
 
-```{r renderMe, eval = FALSE, echo = FALSE}
+
 #
-# Execute this block to render this document.
-#
+# Load libraries
 devtools::load_all()
-rmarkdown::render("predict.Rmd")
-```
-
-Which TF will we predict on?
-```{r}
-tf <- 'ATF3'
-```
-
-Which cell types will we train and validate on?
-```{r cellTypes}
-cell.train <- c('HepG2', 'K562', 'H1-hESC')
-cell.valid <- c('HCT116')
-cell.all <- c(cell.train, cell.valid)
-```
-
-Choose training and validation chromosomes.
-```{r chooseValidation}
-chrs.train <- stringr::str_c('chr', c(3:6, 9:19, 22))
-chrs.valid <- c('chr2', 'chr7', 'chr20')
-```
+library(Saturn)
 
 
-# Responses
+#
+# Parse options
+#
+# opts <- docopt::docopt(doc)
+opts <- docopt::docopt(doc, "CTCF IMR-90")
+print(opts)
+tf <- factor(opts$TF, tf.levels)
+if (is.na(tf)) stop('Unknown TF specified.')
+cell.valid <- factor(opts$VALIDATIONCELL, levels = cell.levels)
+if (is.na(cell.valid)) stop('Unknown validation cell specified.')
 
-Load the binding data
-```{r loadBinding}
+
+
+
+#
+# Which cells do we have data for?
+#
+tf.cells <- tfs %>% filter(TF == tf)
+if (! opts$ladder) tf.cells <- tf.cells %>% filter(split != 'ladder')
+if (! opts$submit) tf.cells <- tf.cells %>% filter(split != 'submit')
+cell.all <- tf.cells$cell
+if (! cell.valid %in% cell.all) stop('We have no data for the validation cell type and this TF.')
+cell.train <- filter(tf.cells, cell != cell.valid)$cell
+
+# levels(tfs$cell)
+# levels(tf.cells$cell)
+# tfs <- tfs %>% mutate(cell = as.character(cell)) %>% mutate(cell = factor(cell, levels = cell.levels))
+# devtools::use_data(tfs, overwrite = TRUE)
+
+
+#
+# Fix training and validation chromosomes
+#
+chrs.train <- factor(stringr::str_c('chr', c(3:6, 9:19, 22)), levels = chr.levels)
+chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
+
+
+#
+# Load the binding data
+#
 chip <- read.chip.labels(tf)
-```
 
 
-# Features
 
-## DNase
-
-Load DNase features and determine which are non-zero
-```{r loadFeatures}
+#
+# Load DNase features and determine which are non-zero
+#
 dnase <-
   lapply(
     cell.all,
@@ -55,14 +71,12 @@ names(dnase) <- cell.all
 non.zero <- lapply(dnase, function(x) x != 0)
 names(non.zero) <- cell.all
 num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
-```
-We have `r print(num.non.zero)` DNase regions in total across training and validation.
+message('# non-zero regions: ', num.non.zero)
 
 
-## Motif features
-
-Load motif features for regions with non-zero DNase
-```{r loadMotifFeatures}
+#
+# Load motif features for regions with non-zero DNase
+#
 motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', 'Known')
 motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
 #
@@ -76,14 +90,12 @@ filter.motif.features <- function(keep) {
   names(motif.keep) <- names(motif.features)
   do.call(S4Vectors::DataFrame, motif.keep)
 }
-```
 
 
-# Wrangle
-
-Create data from the features and response, ignoring those regions without any DNase hits
-and those that are not in our training or validation sets.
-```{r mapFeatures}
+#
+# Create data from the features and response, ignoring those regions without any DNase hits
+# and those that are not in our training or validation sets.
+#
 train.idxs <- regions.test$chrom %in% chrs.train
 valid.idxs <- regions.test$chrom %in% chrs.valid
 regions.for.cell <- function(cell) {
@@ -111,32 +123,27 @@ cell.data <- function(cell) {
 df <- Reduce(rbind, lapply(names(dnase), cell.data))
 # sapply(df, class)
 object.size(df)
-```
 
 
+#
 # Training/validation split
-
-Match features to regions and split training from validation (ignoring ambiguous training regions)
-```{r matchFeatures}
+# Match features to regions and split training from validation (ignoring ambiguous training regions)
+#
 df.train <- df[df$cell %in% cell.train & df$chrom %in% chrs.train & 'A' != df$bound,]
 df.train$bound <- Rle(ifelse('U' == df.train$bound, 0, 1))
 df.valid <- df[df$cell %in% cell.valid & df$chrom %in% chrs.valid & 'A' != df$bound,]
 df.valid$bound <- Rle(ifelse('U' == df.valid$bound, 0, 1))
-```
-Have `r nrow(df.train)` training regions and `r nrow(df.valid)`
-validation regions.
+message('# training regions: ', nrow(df.train))
+message('# validation regions: ', nrow(df.valid))
 
 
+#
 # Fit
-
-Convert the Rle DataFrames to sparse matrices
-```{r sparse}
+#
+# Convert the Rle DataFrames to sparse matrices
 mat.train <- as(subset(df.train, select = -c(cell, chrom, start, bound)), "Matrix")
 mat.valid <- as(subset(df.valid, select = -c(cell, chrom, start, bound)), "Matrix")
-```
-
-Fit a logistic regression
-```{r fitLR}
+# Fit a logistic regression
 glmnet.y <- factor(ifelse(df.train$bound, 'B', 'U'), levels=c('U', 'B'))
 system.time(cvfit <- glmnet::cv.glmnet(mat.train, glmnet.y, family = 'binomial'))
 summary(cvfit)
@@ -145,20 +152,16 @@ cvfit$lambda.min
 cvfit$lambda.1se
 coef(cvfit, s = "lambda.min")
 coef(cvfit, s = "lambda.1se")
-```
 
 
+#
 # Validate
-
-Make predictions on validation data
-```{r predict}
+#
+# Make predictions on validation data
 predictions <- predict(cvfit, mat.valid, s = "lambda.min")
 predictions <- predict(cvfit, mat.valid, s = "lambda.1se")
 dim(predictions)
-```
-
-Assess quality of predictions
-```{r assess}
+# Assess quality of predictions
 labels <- as.vector(df.valid$bound)
 scores <- predictions[,1]
 length(labels)
@@ -171,13 +174,12 @@ fig = prg::plot_prg(prg_curve)
 print(auprg)
 print(convex_hull)
 print(fig)
-```
 
 
+#
 # Write predictions
-
-Write predictions in format needed for submission
-```{r writePredictions}
+#
+# Write predictions in format needed for submission
 out <- data.frame(
   chrom = df.valid$chrom,
   start = df.valid$start,
@@ -185,17 +187,12 @@ out <- data.frame(
   pred  = logit.inv(predictions[,1]))
 predictions.file <- 'predictions.tsv'
 readr::write_tsv(out, predictions.file, col_names = FALSE)
-```
 
 
+#
 # Session information
-
-`r date()` on `r Sys.info()[["nodename"]]`
-```{r sessionInfo}
+#
+print(date())
+print(Sys.info()[["nodename"]])
 devtools::session_info()
-```
-
-Largest objects in memory
-```{r largestObjects}
 largest.objects()
-```

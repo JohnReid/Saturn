@@ -10,6 +10,12 @@
   'qValue',
   'peak')
 
+tf.levels <- c(
+  "ARID3A", "ATF2",   "ATF3",   "ATF7",   "CEBPB",  "CREB1",  "CTCF",   "E2F1",
+  "E2F6",   "EGR1",   "EP300",  "FOXA1",  "FOXA2",  "GABPA",  "GATA3",  "HNF4A",
+  "JUND",   "MAFK",   "MAX",    "MYC",    "NANOG",  "REST",   "RFX5",   "SPI1",
+  "SRF",    "STAT3",  "TAF1",   "TCF12",  "TCF7L2", "TEAD4",  "YY1",    "ZNF143")
+
 cell.levels <- c(
     'A549',
     'GM12878',
@@ -17,7 +23,7 @@ cell.levels <- c(
     'HCT116',
     'HeLa-S3',
     'HepG2',
-    'IMR90',
+    'IMR-90',
     'induced_pluripotent_stem_cell',
     'K562',
     'liver',
@@ -25,7 +31,9 @@ cell.levels <- c(
     'Panc1',
     'PC-3',
     'SK-N-SH')
-chrs.levels <- c(stringr::str_c('chr', 1:22), 'chrX')
+
+chr.levels <- c(stringr::str_c('chr', 1:22), 'chrX')
+
 binding.levels <- c('U', 'A', 'B')
 
 hg19 <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
@@ -171,7 +179,7 @@ read.chip.labels <- memoise::memoise(function(tf) {
   # Read ChIP labels into data.table
   labels.dt <- data.table::fread(stringr::str_c('zcat ', path), sep = '\t', drop = 'stop', verbose = FALSE) %>% rename(chrom = chr)
   # Make chrom into a factor with correct levels
-  labels.dt$chrom <- factor(labels.dt$chrom, levels = chrs.levels)
+  labels.dt$chrom <- factor(labels.dt$chrom, levels = chr.levels)
   # Sort by chrom then start
   data.table::setkey(labels.dt, chrom, start)
   # Convert into S4Vectors::Dataframe using Rle
@@ -307,7 +315,7 @@ load.regions <- function(name) {
     df <-
        readr::read_tsv(file, col_names = c('chrom', 'start', 'end'), progress = FALSE) %>%
        select(-end) %>%
-       mutate(chrom = factor(chrom, levels = chrs.levels)) %>%
+       mutate(chrom = factor(chrom, levels = chr.levels)) %>%
        arrange(chrom, start)
     S4Vectors::DataFrame(chrom = S4Vectors::Rle(df$chrom), start = df$start)
 }
