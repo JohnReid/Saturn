@@ -183,7 +183,7 @@ out <- data.frame(
   start = df.valid$start,
   end   = df.valid$start + 200,
   pred  = logit.inv(predictions))
-predictions.file <- 'predictions.tsv.gz'
+predictions.file <- 'predictions.tsv'
 readr::write_tsv(out, predictions.file, col_names = FALSE)
 ```
 
