@@ -68,6 +68,7 @@ fi
 ls -l $POS $NEG
 dreme \
     -png -eps \
+    -mink 6 \
     -p $SEQSDIR/$TF-pos.fa \
     -n $SEQSDIR/$TF-neg.fa \
     -o $SEQSDIR/DREME-$TF
