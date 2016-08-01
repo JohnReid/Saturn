@@ -17,8 +17,8 @@ library(Saturn)
 #
 # Parse options
 #
-# opts <- docopt::docopt(doc)
-opts <- docopt::docopt(doc, "CTCF IMR-90")
+opts <- docopt::docopt(doc)
+# opts <- docopt::docopt(doc, "CTCF IMR-90")
 print(opts)
 tf <- factor(opts$TF, tf.levels)
 if (is.na(tf)) stop('Unknown TF specified.')
