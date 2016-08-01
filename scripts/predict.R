@@ -5,7 +5,7 @@
 "Usage: predict.R TF VALIDATIONCELL
 -o --output DIR  specify output directory [default: ./predictions]
 -l --ladder      Use ladder cell types [default: FALSE]
--s --submit      Use submissiong cell types [default: FALSE]" -> doc
+-s --submit      Use submission cell types [default: FALSE]" -> doc
 
 
 #
