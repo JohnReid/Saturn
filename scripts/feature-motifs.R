@@ -70,8 +70,9 @@ names(features) <- motifs
 #
 # Save features and motif names
 #
-feature.file <- function(m) file.path(features.dir, str_c('motif-', m, '.rds'))
+feature.file <- function(m) str_c('motif-', m, '.rds')
+feature.path <- function(m) file.path(features.dir, feature.file(m))
 motifs.meta <- data.frame(motif = motifs, motif.r = rify(motifs)) %>%
   mutate(feature.file = feature.file(motif))
 saveRDS(motifs.meta, file.path(features.dir, 'motif-names.rds'))
-lapply(motifs, function(m) saveRDS(features[[m]], feature.file(m)))
+lapply(motifs, function(m) saveRDS(features[[m]], feature.path(m)))
