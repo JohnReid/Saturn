@@ -5,3 +5,4 @@ machine.file.*
 FASTA-*.html
 get-TF-fasta.html
 predict.html
+predictions.tsv
