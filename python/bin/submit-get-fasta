@@ -16,5 +16,5 @@ TFS="
 for TF in $TFS
 do
     echo $TF
-    sbatch SLURM/get-fasta.slurm $TF
+    sbatch $SATURNDIR/python/bin/fasta-get $TF
 done
