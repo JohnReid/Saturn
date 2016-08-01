@@ -27,35 +27,35 @@ Load the ChIP data for `{r params$TF}`.
 ```{r loadChip}
 library(Saturn)
 TF <- params$TF
-chip.labels <- load.chip.labels(TF)
+chip <- read.chip.labels(TF)
 ```
 
 Analyse the ChIP data to see which regions bind in at least one cell type.
 ```{r getPositive}
-is.bound <- Map(function(x) 3 == x, as.list(mcols(chip.labels)))
+tf.cells <- cell.names(chip)
+is.bound <- Map(function(x) 'B' == x, as.list(chip[tf.cells]))
 bound <- Reduce(function(x,y) x | y, is.bound)
-positive <- chip.labels[bound]
+positive <- regions.to.ranges(chip[bound,])
+stopifnot(sum(bound) == length(positive))
 ```
 We have `r length(positive)` positive ChIP regions.
 
-Determine maximum DNase levels across cell types in the negative sequences.
+Determine maximum DNase levels across cell types.
 ```{r dnase}
-tf.cells <- unrify(colnames(mcols(chip.labels)))
 dnase.cells <- lapply(as.character(tf.cells), function(cell) summarise.dnase(cell, 'relaxed'))
 dnase.max <- Reduce(pmax, dnase.cells)
 ```
 
-Sort the sequences by their maximum DNase levels and select those with
+Sort the training regions by their maximum DNase levels and select those with
 the highest levels that are not bound
 ```{r getNegative}
-# Check we have at least as many negative sequences.
-dnase.max.idx <- order(dnase.max, decreasing = TRUE)
-chip.labels.ordered <- chip.labels[dnase.max.idx]
-is.unbound <- Map(function(x) 3 != x, as.list(mcols(chip.labels.ordered)))
-unbound <- Reduce(function(x,y) x & y, is.unbound)
-negative <- chip.labels.ordered[unbound]
-stopifnot(length(negative) >= length(positive))
-negative <- negative[1:length(positive)]
+# Get the maximum DNase levels in the training regions
+dnase.max.idx <- order(dnase.max[! Rle(is.na(regions.test$train.idx))], decreasing = TRUE)
+# Check we have at least as many unbound sequences
+stopifnot(sum(! bound) >= sum(bound))
+# Limit to the regions that are unbound
+unbound.dnase.max.idx <- dnase.max.idx[as.vector(! bound)][1:length(positive)]
+negative <- regions.to.ranges(chip[unbound.dnase.max.idx,])
 stopifnot(length(negative) == length(positive))
 ```
 We have `r length(negative)` negative ChIP regions.

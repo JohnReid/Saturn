@@ -107,17 +107,17 @@ load.narrowpeak <- function(path) {
   readr::read_tsv(
     path, progress = FALSE,
     col_names = .NARROWPEAK.COLS,
-    col_types = cols(
-      chrom = col_factor(seqnames(hg19)),
-      chromStart = col_integer(),
-      chromEnd = col_integer(),
-      name = col_character(),
-      score = col_integer(),
-      strand = col_character(),
-      signalValue = col_double(),
-      pValue = col_double(),
-      qValue = col_double(),
-      peak = col_integer()))
+    col_types = readr::cols(
+      chrom = readr::col_factor(seqnames(hg19)),
+      chromStart = readr::col_integer(),
+      chromEnd = readr::col_integer(),
+      name = readr::col_character(),
+      score = readr::col_integer(),
+      strand = readr::col_character(),
+      signalValue = readr::col_double(),
+      pValue = readr::col_double(),
+      qValue = readr::col_double(),
+      peak = readr::col_integer()))
 }
 
 #' Convert a narrowPeak data frame to GRanges.
@@ -165,8 +165,7 @@ tf.chip.labels.file <- function(tf)
 
 #' Read the ChIP binding labels for the TF into a S4Vectors::DataFrame
 #'
-# read.chip.labels <- memoise::memoise(function(tf) {
-read.chip.labels <- (function(tf) {
+read.chip.labels <- memoise::memoise(function(tf) {
   path <- tf.chip.labels.file(tf)
   message('Loading: ', path)
   # Read ChIP labels into data.table
@@ -312,6 +311,11 @@ load.regions <- function(name) {
        arrange(chrom, start)
     S4Vectors::DataFrame(chrom = S4Vectors::Rle(df$chrom), start = df$start)
 }
+
+
+#' Assume all columns that are not named cell, chrom, start, stop, end are cell names
+#'
+cell.names <- function(df) colnames(df)[! colnames(df) %in% c('cell', 'chrom', 'start', 'end', 'stop')]
 
 
 #' Convert regions to ranges
