@@ -137,7 +137,6 @@ mat.valid <- as(subset(df.valid, select = -c(cell, chrom, start, bound)), "Matri
 
 Fit a logistic regression
 ```{r fitLR}
-# system.time(fit <- glm(bound ~ ., family = binomial(link = 'logit'), data = mat.train))
 glmnet.y <- factor(ifelse(df.train$bound, 'B', 'U'), levels=c('U', 'B'))
 system.time(cvfit <- glmnet::cv.glmnet(mat.train, glmnet.y, family = 'binomial'))
 summary(cvfit)
