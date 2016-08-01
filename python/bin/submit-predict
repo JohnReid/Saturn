@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+doc = """Usage: submit-predict [-sl]
+
+-s --submit   Use submission cell types [default=False].
+-l --ladder   Use ladder cell types [default=False].
+"""
+
+from docopt import docopt
+import subprocess
+
+from rpy2.robjects import r
+from rpy2.robjects import pandas2ri
+pandas2ri.activate()
+
+
+#
+# Parse arguments
+#
+opts = docopt(doc)
+print(opts)
+
+
+#
+# Set up paths
+#
+tfsdata = '../data/tfs.rda'
+predictscript = '../python/bin/predict'
+
+
+#
+# Set up argments for subprocesses
+#
+cmdargs = ['sbatch', predictscript]
+if opts['--ladder']:
+    cmdargs.append('-l')
+if not opts['--submit']:
+    cmdargs.append('-s')
+
+
+#
+# Load R data frame
+#
+objs = r('load("{}")'.format(tfsdata))
+tfs = r[objs[0]]
+
+
+#
+# For each TF
+#
+for tf, group in tfs.groupby('TF'):
+    if not opts['--ladder']:
+        group = group['ladder' != group.split]
+    if not opts['--submit']:
+        group = group['submit' != group.split]
+    for validcell in group.cell:
+        print(tf, validcell)
+        args = cmdargs + [
+            tf,
+            validcell
+        ]
+        subprocess.check_call(args)
+        break
+    break
