@@ -142,6 +142,7 @@ system.time(cvfit <- glmnet::cv.glmnet(mat.train, glmnet.y, family = 'binomial')
 summary(cvfit)
 plot(cvfit)
 cvfit$lambda.min
+cvfit$lambda.1se
 coef(cvfit, s = "lambda.min")
 coef(cvfit, s = "lambda.1se")
 ```
@@ -189,7 +190,7 @@ readr::write_tsv(out, predictions.file, col_names = FALSE)
 
 # Session information
 
-`r date()`
+`r date()` on `r Sys.info()[["nodename"]]`
 ```{r sessionInfo}
 devtools::session_info()
 ```
