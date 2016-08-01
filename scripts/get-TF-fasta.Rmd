@@ -64,8 +64,8 @@ Write the positive and negative sequences to separate FASTA files.
 ```{r writeSeqs}
 write.seqs <- function(gr, label) {
     seqs <- BSgenome::getSeq(hg19, gr)
-    names(seqs) <- str_c(TF, ".", label, ".", chrom(gr), ':', start(gr), ':', end(gr))
-    fasta <- file.path(saturn.data(), 'ChIPseq', 'seqs', str_c(TF, '-', label, '.fa'))
+    names(seqs) <- stringr::str_c(TF, ".", label, ".", rtracklayer::chrom(gr), ':', start(gr), ':', end(gr))
+    fasta <- file.path(saturn.data(), 'ChIPseq', 'seqs', stringr::str_c(TF, '-', label, '.fa'))
     Biostrings::writeXStringSet(seqs, fasta)
 }
 write.seqs(positive, 'pos')
