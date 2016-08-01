@@ -55,6 +55,19 @@ setAs("DataFrame", "Matrix", function(from) {
 })
 
 
+#' Logit function
+#'
+logit <- function(p) log(p) - log(1-p)
+
+
+#' Inverse of logit function
+#'
+logit.inv <- function(l) {
+  e <- exp(l)
+  e / (e + 1)
+}
+
+
 #' Retrieve N largest objects in global environment.
 #'
 largest.objects <- function(N = 10) {

@@ -56,7 +56,7 @@ non.zero <- lapply(dnase, function(x) x != 0)
 names(non.zero) <- cell.all
 num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
 ```
-We have `r num.non.zero` DNase regions in total across training and validation.
+We have `r print(num.non.zero)` DNase regions in total across training and validation.
 
 
 ## Motif features
@@ -109,7 +109,7 @@ cell.data <- function(cell) {
       filter.motif.features(keep))
 }
 df <- Reduce(rbind, lapply(names(dnase), cell.data))
-sapply(df, class)
+# sapply(df, class)
 object.size(df)
 ```
 
@@ -170,6 +170,20 @@ fig = prg::plot_prg(prg_curve)
 print(auprg)
 print(convex_hull)
 print(fig)
+```
+
+
+# Write predictions
+
+Write predictions in format needed for submission
+```{r writePredictions}
+out <- data.frame(
+  chrom = df.valid$chrom,
+  start = df.valid$start,
+  end   = df.valid$start + 200,
+  pred  = logit.inv(predictions))
+predictions.file <- 'predictions.tsv.gz'
+readr::write_tsv(out, predictions.file, col_names = FALSE)
 ```
 
 

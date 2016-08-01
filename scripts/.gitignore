@@ -4,3 +4,4 @@ machine.file.*
 *.pdf
 FASTA-*.html
 get-TF-fasta.html
+predict.html
