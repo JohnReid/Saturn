@@ -326,6 +326,36 @@ load.regions <- function(name) {
 cell.names <- function(df) colnames(df)[! colnames(df) %in% c('cell', 'chrom', 'start', 'end', 'stop')]
 
 
+#' The index of the region in the test regions, given its index in the training regions
+#'
+train.to.test.idx <- function(idx) regions.train$test.idx[idx]
+
+
+#' The index of the region in the test regions, given its index in the ladder regions
+#'
+ladder.to.test.idx <- function(idx) regions.ladder$test.idx[idx]
+
+
+#' The index of the region in the training regions, given its index in the test regions
+#'
+test.to.train.idx <- function(idx) regions.test$train.idx[idx]
+
+
+#' The index of the region in the ladder regions, given its index in the test regions
+#'
+test.to.ladder.idx <- function(idx) regions.test$ladder.idx[idx]
+
+
+#' The test indexes of the training regions
+#'
+training.region.test.idxs <- memoise::memoise(function() ! Rle(is.na(regions.test$train.idx)))
+
+
+#' The test indexes of the ladder regions
+#'
+ladder.region.test.idxs <- function() ! training.region.test.idxs()
+
+
 #' Convert regions to ranges
 #'
 regions.to.ranges <- function(regions) GRanges(

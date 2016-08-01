@@ -35,7 +35,11 @@ Analyse the ChIP data to see which regions bind in at least one cell type.
 tf.cells <- cell.names(chip)
 is.bound <- Map(function(x) 'B' == x, as.list(chip[tf.cells]))
 bound <- Reduce(function(x,y) x | y, is.bound)
+# Check we have at least as many unbound sequences
+stopifnot(sum(! bound) >= sum(bound))
+# Generate ranges
 positive <- regions.to.ranges(chip[bound,])
+# Make sure we have right number
 stopifnot(sum(bound) == length(positive))
 ```
 We have `r length(positive)` positive ChIP regions.
@@ -50,12 +54,17 @@ Sort the training regions by their maximum DNase levels and select those with
 the highest levels that are not bound
 ```{r getNegative}
 # Get the maximum DNase levels in the training regions
-dnase.max.idx <- order(dnase.max[! Rle(is.na(regions.test$train.idx))], decreasing = TRUE)
-# Check we have at least as many unbound sequences
-stopifnot(sum(! bound) >= sum(bound))
-# Limit to the regions that are unbound
+dnase.max.idx <- order(dnase.max[training.region.test.idxs()], decreasing = TRUE)
+# Limit to the regions that are unbound and only as many as in the positive set
 unbound.dnase.max.idx <- dnase.max.idx[as.vector(! bound)][1:length(positive)]
+# Find the negative regions with the lowest and highest dnase levels
+highest.neg.dnase <- dnase.max[train.to.test.idx(unbound.dnase.max.idx[1])]
+lowest.neg.dnase  <- dnase.max[train.to.test.idx(unbound.dnase.max.idx[length(positive)])]
+message('First negative region has DNase level: ', highest.neg.dnase)
+message('Last  negative region has DNase level: ', lowest.neg.dnase)
+# Generate ranges
 negative <- regions.to.ranges(chip[unbound.dnase.max.idx,])
+# Check we have correct number
 stopifnot(length(negative) == length(positive))
 ```
 We have `r length(negative)` negative ChIP regions.
