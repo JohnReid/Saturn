@@ -18,11 +18,11 @@ library(Saturn)
 # Parse options
 #
 # opts <- docopt::docopt(doc)
-opts <- docopt::docopt(doc, "CTCF HCT116")
+opts <- docopt::docopt(doc, "CTCF IMR-90")
 print(opts)
 tf <- factor(opts$TF, tf.levels)
 if (is.na(tf)) stop('Unknown TF specified.')
-cell.valid <- opts$VALIDATIONCELL
+cell.valid <- factor(opts$VALIDATIONCELL, levels = cell.levels)
 if (is.na(cell.valid)) stop('Unknown validation cell specified.')
 
 
@@ -38,12 +38,17 @@ cell.all <- tf.cells$cell
 if (! cell.valid %in% cell.all) stop('We have no data for the validation cell type and this TF.')
 cell.train <- filter(tf.cells, cell != cell.valid)$cell
 
+# levels(tfs$cell)
+# levels(tf.cells$cell)
+# tfs <- tfs %>% mutate(cell = as.character(cell)) %>% mutate(cell = factor(cell, levels = cell.levels))
+# devtools::use_data(tfs, overwrite = TRUE)
+
 
 #
 # Fix training and validation chromosomes
 #
-chrs.train <- factor(stringr::str_c('chr', c(3:6, 9:19, 22)), levels = chrs.levels)
-chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chrs.levels)
+chrs.train <- factor(stringr::str_c('chr', c(3:6, 9:19, 22)), levels = chr.levels)
+chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
 
 
 #

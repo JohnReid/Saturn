@@ -22,7 +22,7 @@ stopifnot(dir.exists(features.dir))
 # Read sequence names
 seqs <-
   fread(motifs.seqs, col.names = c('length', 'chrom'), header = TRUE) %>%
-  mutate(chrom = factor(chrom, chrs.levels))
+  mutate(chrom = factor(chrom, chr.levels))
 sapply(seqs, class)
 # Read hits
 hits <-

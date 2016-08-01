@@ -143,7 +143,7 @@ seqs[[3]][1:4]
 # Test plotting
 library(ggbio)
 rest.hepg2.labels <- rest.labels[mcols(rest.labels)[,'HepG2'] != 'U']
-autoplot(seqinfo(rest.hepg2.labels)[chrs.levels]) +
+autoplot(seqinfo(rest.hepg2.labels)[chr.levels]) +
   layout_karyogram(rest.hepg2.labels,
                    aes_string(fill='HepG2', color='HepG2'))
 region <- reduce(rest.labels[regions,])
