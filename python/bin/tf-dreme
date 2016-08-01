@@ -33,6 +33,7 @@ fi
 #
 USAGE="USAGE: $0 <TF>"
 TF=${1?:$USAGE}
+echo "TF: $TF"
 
 #
 # Set up variables
@@ -58,7 +59,7 @@ fi
 if [ -d $OUTDIR ]
 then
     echo "$TF: already run: $OUTDIR"
-    exit -1
+    exit
 fi
 
 #
@@ -70,3 +71,5 @@ dreme \
     -p $SEQSDIR/$TF-pos.fa \
     -n $SEQSDIR/$TF-neg.fa \
     -o $SEQSDIR/DREME-$TF
+
+echo "Done: $TF"

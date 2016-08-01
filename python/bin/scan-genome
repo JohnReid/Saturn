@@ -49,7 +49,7 @@ OUTPUTDIR=$MOTIFSDIR/genome-scan
 if [ -d $OUTPUTDIR ]
 then
     echo "Output directory already exists: $OUTPUTDIR"
-    exit -1
+    exit
 fi
 
 #

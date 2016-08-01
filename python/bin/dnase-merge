@@ -59,7 +59,7 @@ OUTPUT=$DATADIR/DNASE.$CELL.merged.bam
 if [ -f "$OUTPUT" ]
 then
     echo "Output already exists: $OUTPUT"
-    exit -1
+    exit
 fi
 
 #
