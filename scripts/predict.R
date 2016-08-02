@@ -78,11 +78,6 @@ num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
 message('# non-zero regions across all cell types: ', num.non.zero)
 
 #
-# Work out the indices of the non.zero regions in the validation cell
-#
-non.zero.idxs.valid <- (1:length(non.zero[[as.character(cell.valid)]]))[as.vector(nz)]
-
-#
 # Load motif features for regions with non-zero DNase
 #
 motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', 'Known')
