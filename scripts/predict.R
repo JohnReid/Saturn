@@ -5,7 +5,9 @@
 "Usage: predict.R TF VALIDATIONCELL
 -o --output DIR  specify output directory [default: ./predictions]
 -l --ladder      Use ladder cell types [default: FALSE]
--s --submit      Use submission cell types [default: FALSE]" -> doc
+-s --submit      Use submission cell types [default: FALSE]
+-t --test        Make predictions on all test regions rather
+                 than just the validation chromosomes [default: FALSE]" -> doc
 
 
 #
@@ -17,6 +19,7 @@ library(Saturn)
 #
 # Parse options
 #
+# .args <- "E2F1 HeLa-S3"
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
@@ -39,17 +42,16 @@ if (! cell.valid %in% cell.all) stop('We have no data for the validation cell ty
 cell.train <- filter(tf.cells, cell != cell.valid)$cell
 if (! length(cell.train)) stop('We have no training data for this cell')
 
-# levels(tfs$cell)
-# levels(tf.cells$cell)
-# tfs <- tfs %>% mutate(cell = as.character(cell)) %>% mutate(cell = factor(cell, levels = cell.levels))
-# devtools::use_data(tfs, overwrite = TRUE)
-
 
 #
 # Fix training and validation chromosomes
 #
 chrs.train <- factor(stringr::str_c('chr', c(3:6, 9:19, 22)), levels = chr.levels)
-chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
+if (opts$test) {
+  chrs.valid <- factor(chr.levels, levels = chr.levels)
+} else {
+  chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
+}
 
 
 #
@@ -60,6 +62,8 @@ chip <- load.chip.features(tf)
 
 #
 # Load DNase features and determine which are non-zero
+# Any regions with zero DNase-levels we will assume are
+# non-binding
 #
 dnase <-
   lapply(
@@ -71,8 +75,12 @@ names(dnase) <- cell.all
 non.zero <- lapply(dnase, function(x) x != 0)
 names(non.zero) <- cell.all
 num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
-message('# non-zero regions: ', num.non.zero)
+message('# non-zero regions across all cell types: ', num.non.zero)
 
+#
+# Work out the indices of the non.zero regions in the validation cell
+#
+non.zero.idxs.valid <- (1:length(non.zero[[as.character(cell.valid)]]))[as.vector(nz)]
 
 #
 # Load motif features for regions with non-zero DNase
@@ -155,24 +163,10 @@ coef(cvfit, s = "lambda.1se")
 
 
 #
-# Validate
-#
 # Make predictions on validation data
-predictions <- predict(cvfit, mat.valid, s = "lambda.min")
-predictions <- predict(cvfit, mat.valid, s = "lambda.1se")
-dim(predictions)
-# Assess quality of predictions
-labels <- as.vector(df.valid$bound)
-scores <- predictions[,1]
-length(labels)
-length(scores)
-prg_curve = prg::create_prg_curve(labels, scores)
-auprg = prg::calc_auprg(prg_curve)
-# convex_hull = prg::prg_convex_hull(prg_curve)
-fig = prg::plot_prg(prg_curve)
-# print(prg_curve)
-message('AUPRG: ', tf, ', ', cell.valid, ', ', auprg)
-# print(fig)
+#
+# predictions <- predict(cvfit, mat.valid, s = "lambda.min")
+predictions <- predict(cvfit, mat.valid, s = "lambda.1se")[,1]
 
 
 #
@@ -183,10 +177,20 @@ out <- data.frame(
   chrom = df.valid$chrom,
   start = df.valid$start,
   end   = as.integer(df.valid$start + 200),
-  pred  = logit.inv(predictions[,1]))
+  pred  = logit.inv(predictions))
+dim(out)
+# Add truth binding values to data frame if we know them
+if (cell.valid %in% names(chip)) {
+  chip.valid <- chip[[as.character(cell.valid)]]
+  nz.valid <- non.zero[[as.character(cell.valid)]][training.region.test.idxs()]
+  idxs.valid <- valid.idxs[training.region.test.idxs()]
+  out$bound <- chip.valid['A' != chip.valid & nz.valid & idxs.valid]
+}
 predictions.file <- stringr::str_c('predictions-', as.character(tf),
                                    '-', as.character(cell.valid), '.tsv')
-readr::write_tsv(out, predictions.file, col_names = FALSE)
+predictions.path <- file.path(saturn.data(), 'Predictions', predictions.file)
+message('Writing predictions to: ', predictions.path)
+readr::write_tsv(out, predictions.path, col_names = FALSE)
 
 
 #

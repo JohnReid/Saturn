@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+doc = "Usage: score-predictions PREDICTIONSFILE"
+
+
+#
+# Load libraries
+#
+from docopt import docopt
+from sklearn.metrics import precision_recall_curve, roc_curve, auc
+import pandas as pd
+
+
+def recall_at_fdr(fdr_cutoff=0.05):
+    fdr = 1 - precision
+    cutoff_index = next(i for i, x in enumerate(1 - precision) if x <= fdr_cutoff)
+    return recall[cutoff_index]
+
+
+#
+# Parse options
+#
+opts = docopt(doc)
+
+
+#
+# Load predictions
+#
+predictionsfile = opts['PREDICTIONSFILE']
+predictions = pd.read_table(
+    predictionsfile,
+    names = ['chrom', 'start', 'end', 'pred', 'bound'])
+y_true = (predictions.bound == 'B').values
+y_score = predictions.pred.values
+
+
+#
+# Do ROC analysis
+#
+fpr, tpr, rocthresholds = roc_curve(y_true, y_score)
+auroc = auc(fpr, tpr)
+
+
+#
+# Do precision-recall analysis
+#
+precision, recall, prthresholds = precision_recall_curve(y_true, y_score)
+auprc = auc(recall, precision)
+
+
+#
+# Analyse recall at different FDRs
+#
+fdr_cutoffs = (.05, .10, .25, .50)
+recallatcutoffs = map(recall_at_fdr, fdr_cutoffs)
+
+
+#
+# Print results
+#
+print('{}; AUROC={:.3f}; AUPRC={:.3f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}'.format(
+    predictionsfile,
+    auroc, auprc,
+    fdr_cutoffs[0], recallatcutoffs[0],
+    fdr_cutoffs[1], recallatcutoffs[1],
+    fdr_cutoffs[2], recallatcutoffs[2],
+    fdr_cutoffs[3], recallatcutoffs[3]))
