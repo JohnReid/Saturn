@@ -55,8 +55,7 @@ chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
 #
 # Load the binding data
 #
-chip <- read.chip.labels(tf)
-
+chip <- load.chip.features(tf)
 
 
 #
