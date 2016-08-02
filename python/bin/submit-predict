@@ -33,7 +33,7 @@ predictscript = '../python/bin/predict'
 cmdargs = ['sbatch', predictscript]
 if opts['--ladder']:
     cmdargs.append('-l')
-if not opts['--submit']:
+if opts['--submit']:
     cmdargs.append('-s')
 
 
@@ -53,11 +53,11 @@ for tf, group in tfs.groupby('TF'):
     if not opts['--submit']:
         group = group['submit' != group.split]
     for validcell in group.cell:
-        print(tf, validcell)
         args = cmdargs + [
             tf,
             validcell
         ]
+        print(args)
         subprocess.check_call(args)
         break
     break
