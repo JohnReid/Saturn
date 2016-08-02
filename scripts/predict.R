@@ -17,8 +17,8 @@ library(Saturn)
 #
 # Parse options
 #
-opts <- docopt::docopt(doc)
-# opts <- docopt::docopt(doc, "CTCF IMR-90")
+if (! exists(".args")) .args <- commandArgs(TRUE)
+opts <- docopt::docopt(doc, args = .args)
 print(opts)
 tf <- factor(opts$TF, tf.levels)
 if (is.na(tf)) stop('Unknown TF specified.')
@@ -37,6 +37,7 @@ if (! opts$submit) tf.cells <- tf.cells %>% filter(split != 'submit')
 cell.all <- tf.cells$cell
 if (! cell.valid %in% cell.all) stop('We have no data for the validation cell type and this TF.')
 cell.train <- filter(tf.cells, cell != cell.valid)$cell
+if (! length(cell.train)) stop('We have no training data for this cell')
 
 # levels(tfs$cell)
 # levels(tf.cells$cell)
