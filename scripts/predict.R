@@ -172,9 +172,8 @@ auprg = prg::calc_auprg(prg_curve)
 convex_hull = prg::prg_convex_hull(prg_curve)
 fig = prg::plot_prg(prg_curve)
 # print(prg_curve)
-print(auprg)
-print(convex_hull)
-print(fig)
+message('AUPRG: ', auprg)
+# print(fig)
 
 
 #
