@@ -48,14 +48,17 @@ tfs = r[objs[0]]
 # For each TF
 #
 for tf, group in tfs.groupby('TF'):
+    #
     # Filter the group according to the arguments
     if not opts['--ladder']:
         group = group['ladder' != group.split]
     if not opts['--submit']:
         group = group['submit' != group.split]
+    #
     # We need more than one cell type to run the prediction
     if group.shape[0] < 2:
         continue
+    #
     # Choose each cell type as the validation cell type in turn
     for validcell in group.cell:
         args = cmdargs + [
@@ -64,5 +67,3 @@ for tf, group in tfs.groupby('TF'):
         ]
         print(args)
         subprocess.check_call(args)
-        break
-    break
