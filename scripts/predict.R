@@ -122,7 +122,7 @@ cell.data <- function(cell) {
 }
 df <- Reduce(rbind, lapply(names(dnase), cell.data))
 # sapply(df, class)
-object.size(df)
+message('Data size: ', object.size(df))
 
 
 #
@@ -133,7 +133,7 @@ df.train <- df[df$cell %in% cell.train & df$chrom %in% chrs.train & 'A' != df$bo
 df.train$bound <- Rle(ifelse('U' == df.train$bound, 0, 1))
 df.valid <- df[df$cell %in% cell.valid & df$chrom %in% chrs.valid & 'A' != df$bound,]
 df.valid$bound <- Rle(ifelse('U' == df.valid$bound, 0, 1))
-message('# training regions: ', nrow(df.train))
+message('# training regions  : ', nrow(df.train))
 message('# validation regions: ', nrow(df.valid))
 
 
@@ -185,7 +185,8 @@ out <- data.frame(
   start = df.valid$start,
   end   = as.integer(df.valid$start + 200),
   pred  = logit.inv(predictions[,1]))
-predictions.file <- 'predictions.tsv'
+predictions.file <- stringr::str_c('predictions-', as.character(tf),
+                                   '-', as.character(cell.valid), '.tsv')
 readr::write_tsv(out, predictions.file, col_names = FALSE)
 
 
