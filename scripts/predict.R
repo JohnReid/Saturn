@@ -169,10 +169,10 @@ length(labels)
 length(scores)
 prg_curve = prg::create_prg_curve(labels, scores)
 auprg = prg::calc_auprg(prg_curve)
-convex_hull = prg::prg_convex_hull(prg_curve)
+# convex_hull = prg::prg_convex_hull(prg_curve)
 fig = prg::plot_prg(prg_curve)
 # print(prg_curve)
-message('AUPRG: ', auprg)
+message('AUPRG: ', tf, ', ', cell.valid, ', ', auprg)
 # print(fig)
 
 
