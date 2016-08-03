@@ -177,34 +177,6 @@ saturn.expr <- memoise::memoise(function(cell, biorep) {
       .default = col_double()))
 })
 
-#' Combine ChIP and DNAse data
-#'
-combine.chip.dnase <- function(chip.labels, dnase) {
-  # Find the overlaps between the DNAse data and the ChIP labels
-  overlaps <- as.data.frame(findOverlaps(dnase, chip.labels, ignore.strand = TRUE))
-  # Add the p-values to the overlaps
-  overlaps$dnase <- dnase[overlaps$queryHits,]$pValue
-  # Summarise the overlaps by the maximum p-value for each ChIP label
-  label.dnase <- overlaps %>%
-    group_by(subjectHits) %>%
-    summarise(dnase=max(dnase))
-  dnase <- rep(0, length(chip.labels))
-  dnase[label.dnase$subjectHits] <- label.dnase$dnase
-  chip.labels$dnase <- dnase
-  chip.labels
-}
-
-
-
-#' Load DNase peaks
-load.dnase.peaks <- memoise::memoise(function(cell, type='conservative') {
-  if ('conservative' == type) .type <- 'conservative.train'
-  else .type <- type
-  narrowpeak.granges(load.narrowpeak(
-    file.path(saturn.data(), 'DNASE', 'peaks', type,
-              stringr::str_c('DNASE.', cell, '.', type, '.narrowPeak.gz'))))
-})
-
 
 #' Load regions from annotations
 #'
@@ -279,15 +251,6 @@ ranges.test <- memoise::memoise(function() regions.to.ranges(regions.test))
 #'
 ranges.train <- memoise::memoise(function() regions.to.ranges(regions.train))
 
-
-#' Summarise DNase peaks by ChIP-regions
-#'
-summarise.dnase <- function(cell, type='conservative', aggregation.fn=max) {
-  # Load the peaks
-  dnase <- load.dnase.peaks(cell, type)
-  # Aggregate
-  agg.by.region(dnase, ranges.test(), 'pValue', aggregation.fn)
-}
 
 #' Aggregate the named values in gr by region using the aggregation function.
 #'
