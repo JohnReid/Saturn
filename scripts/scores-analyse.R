@@ -50,4 +50,3 @@ ggplot(scores, aes(x=reorder(cell, recall_10, FUN=median), y=recall_10)) + geom_
 ggplot(scores, aes(x=reorder(TF, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'TF')
 # recall 50 by cell
 ggplot(scores, aes(x=reorder(cell, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'cell')
-ggplot(scores, aes(x=reorder(cell, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'cell')
