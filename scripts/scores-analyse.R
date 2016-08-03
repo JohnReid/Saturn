@@ -51,14 +51,15 @@ reorder(scores$TF, scores$AUPRC, FUN=mean)
 # AUROC vs. AUPRC
 ggplot(scores, aes(x=AUROC, y=AUPRC, label=TF)) + geom_label()
 # AUPRC by TF
-ggplot(scores, aes(x=reorder(TF, AUPRC, FUN=median), y=AUPRC)) + geom_boxplot() + labs(x = 'TF')
+ggplot(scores, aes(x=reorder(TF, AUPRC, FUN=median), y=AUPRC)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'TF')
 # AUPRC by cell
-ggplot(scores, aes(x=reorder(cell, AUPRC, FUN=median), y=AUPRC)) + geom_boxplot() + labs(x = 'cell')
+ggplot(scores, aes(x=reorder(cell, AUPRC, FUN=median), y=AUPRC)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'cell')
 # recall 10 by TF
-ggplot(scores, aes(x=reorder(TF, recall_10, FUN=median), y=recall_10)) + geom_boxplot() + labs(x = 'TF')
+ggplot(scores, aes(x=reorder(TF, recall_10, FUN=median), y=recall_10)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'TF')
 # recall 10 by cell
-ggplot(scores, aes(x=reorder(cell, recall_10, FUN=median), y=recall_10)) + geom_boxplot() + labs(x = 'cell')
+ggplot(scores, aes(x=reorder(cell, recall_10, FUN=median), y=recall_10)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'cell')
 # recall 50 by TF
-ggplot(scores, aes(x=reorder(TF, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + labs(x = 'TF')
+ggplot(scores, aes(x=reorder(TF, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'TF')
 # recall 50 by cell
-ggplot(scores, aes(x=reorder(cell, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + labs(x = 'cell')
+ggplot(scores, aes(x=reorder(cell, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'cell')
+ggplot(scores, aes(x=reorder(cell, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + geom_jitter(height = 0) + labs(x = 'cell')
