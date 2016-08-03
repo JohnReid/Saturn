@@ -9,9 +9,9 @@ library(ggplot2)
 library(stringr)
 
 
-parse.filename <- function(file.name) {
-  str_split_fixed(basename(file.name), fixed('.'), 4)[,2:3]
-}
+#' Parse TF and cell from filename
+#'
+parse.filename <- function(file.name) str_split_fixed(basename(file.name), fixed('.'), 4)[,2:3]
 
 
 #
@@ -31,19 +31,7 @@ scores <- readr::read_tsv(scorestsv)
 parsed <- parse.filename(scores$file)
 scores$TF <- factor(parsed[,1])
 scores$cell <- factor(parsed[,2])
-scores
 
-
-#
-# Calculate statistics
-#
-tf.stats <-
-  scores %>%
-  group_by(TF) %>%
-  summarise(mean=mean(AUPRC)) %>%
-  arrange(mean)
-
-reorder(scores$TF, scores$AUPRC, FUN=mean)
 
 #
 # Plot scores
