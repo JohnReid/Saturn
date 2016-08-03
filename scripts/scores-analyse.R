@@ -17,7 +17,7 @@ parse.filename <- function(file.name) {
 #
 # Parse options
 #
-# .args <- "../slurm/my-scores.tsv"
+# .args <- "my-scores.tsv"
 if (! exists(".args")) .args <- commandArgs(TRUE)  # Check if we have manually set arguments for debugging
 opts <- docopt::docopt(doc, args = .args)
 scorestsv <- opts$SCORESTSV
@@ -35,6 +35,30 @@ scores
 
 
 #
+# Calculate statistics
+#
+tf.stats <-
+  scores %>%
+  group_by(TF) %>%
+  summarise(mean=mean(AUPRC)) %>%
+  arrange(mean)
+
+reorder(scores$TF, scores$AUPRC, FUN=mean)
+
+#
 # Plot scores
 #
-ggplot(scores, aes(x=AUROC, y=AUPRC, colour=TF)) + geom_point()
+# AUROC vs. AUPRC
+ggplot(scores, aes(x=AUROC, y=AUPRC, label=TF)) + geom_label()
+# AUPRC by TF
+ggplot(scores, aes(x=reorder(TF, AUPRC, FUN=median), y=AUPRC)) + geom_boxplot() + labs(x = 'TF')
+# AUPRC by cell
+ggplot(scores, aes(x=reorder(cell, AUPRC, FUN=median), y=AUPRC)) + geom_boxplot() + labs(x = 'cell')
+# recall 10 by TF
+ggplot(scores, aes(x=reorder(TF, recall_10, FUN=median), y=recall_10)) + geom_boxplot() + labs(x = 'TF')
+# recall 10 by cell
+ggplot(scores, aes(x=reorder(cell, recall_10, FUN=median), y=recall_10)) + geom_boxplot() + labs(x = 'cell')
+# recall 50 by TF
+ggplot(scores, aes(x=reorder(TF, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + labs(x = 'TF')
+# recall 50 by cell
+ggplot(scores, aes(x=reorder(cell, recall_50, FUN=median), y=recall_50)) + geom_boxplot() + labs(x = 'cell')
