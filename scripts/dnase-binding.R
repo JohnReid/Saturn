@@ -68,10 +68,11 @@ analyse.tf <- function(tf.meta) {
 }
 dnase.by.bound <- tfs %>% filter('train' == split) %>% group_by(TF) %>% do(analyse.tf(.)) %>% ungroup()
 dnase.by.bound
-devtools::use_data(dnase.by.bound)
+# devtools::use_data(dnase.by.bound)
 
-ggplot(dnase.by.bound, aes(x = bound, y = prop.zero.dnase, fill = bound)) +
-  geom_boxplot() +
+ggplot(dnase.by.bound, aes(x = bound, y = prop.zero.dnase, color = bound, fill = bound)) +
+  # geom_boxplot() +
+  geom_jitter(height = 0) +
   facet_wrap(~ TF, nrow = 4) +
   scale_fill_few() +
   theme_few()
