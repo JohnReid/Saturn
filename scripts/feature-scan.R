@@ -37,18 +37,21 @@ features.dir <- file.path(saturn.data(), 'Features', 'Motifs', scan.tag)
 stopifnot(dir.exists(scan.dir))
 stopifnot(file.exists(scan.out))
 stopifnot(file.exists(scan.seqs))
-dir.create(features.dir, showWarnings = FALSE)
+stopifnot(! dir.exists(features.dir))
+dir.create(features.dir)
 
 
 #
 # Read hits
 #
 # Read sequence names
+message('Read sequence names: ', scan.seqs)
 seqs <-
   data.table::fread(scan.seqs, col.names = c('length', 'chrom'), header = TRUE) %>%
   mutate(chrom = factor(chrom, chr.levels))
 sapply(seqs, class)
 # Read hits
+message('Read scan hits: ', scan.out)
 hits <-
   data.table::fread(
     scan.out,
@@ -69,6 +72,7 @@ object.size(hits)
 #
 # Generate feature for each motif
 #
+message('Generate features for motifs')
 motifs <- levels(hits$motif)
 features <- lapply(motifs,
   function(m) {
@@ -94,6 +98,7 @@ names(features) <- motifs
 #
 # Save features and motif names
 #
+message('Saving features: ', features.dir)
 feature.file <- function(m) stringr::str_c('motif-', m, '.rds')
 feature.path <- function(m) file.path(features.dir, feature.file(m))
 motifs.meta <- data.frame(motif = motifs, motif.r = rify(motifs)) %>%
