@@ -58,7 +58,7 @@ fi
 if [ ! -s $MOTIFSXML ]
 then
     echo "Input motifs file is empty: $MOTIFSXML"
-    exit -1
+    exit
 fi
 
 
