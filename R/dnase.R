@@ -10,10 +10,10 @@ dnase.feature.file <- function(cell) file.path(dnase.features.dir(), stringr::st
 
 #' Load the DNase features for the cell
 #'
-load.dnase.feature <- function(cell) {
+load.dnase.feature <- memoise::memoise(function(cell) {
   message('Loading DNase features for cell ', cell)
   readRDS(dnase.feature.file(cell))
-}
+})
 
 
 #' Load DNase features

@@ -2,7 +2,6 @@
 #
 # Examine DNase levels against binding
 #
-"Usage: dnase-binding.R TF" -> doc
 
 
 #
@@ -15,17 +14,8 @@ options(warn = 2)
 # Load libraries
 devtools::load_all()
 library(Saturn)
-
-
-#
-# Parse options
-#
-# .args <- "E2F1"
-if (! exists(".args")) .args <- commandArgs(TRUE)
-opts <- docopt::docopt(doc, args = .args)
-print(opts)
-tf <- factor(opts$TF, tf.levels)
-if (is.na(tf)) stop('Unknown TF specified.')
+library(ggplot2)
+library(ggthemes)
 
 
 #
@@ -35,40 +25,54 @@ tf.cells <- tfs %>% filter(TF == tf, 'train' == split)
 cell.all <- tf.cells$cell
 
 
-#
-# Load the binding data
-#
-chip <- load.chip.features(tf)
-
-
-#
-# Load DNase features and determine which are non-zero
-# Any regions with zero DNase-levels we will assume are
-# non-binding
-#
-dnase <- load.dnase.features(cell.all)
-non.zero <- lapply(dnase, function(x) x != 0)
-names(non.zero) <- cell.all
-num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
-message('# non-zero regions across all cell types: ', num.non.zero)
-
-
-#
-# For each cell type
-#
-for (cell in cell.all) {
-  message(cell)
-  cell.df <- S4Vectors::DataFrame(bound = chip[[cell]], dnase = dnase[[cell]][training.region.test.idxs()])
-  zero.dnase <- 0 == cell.df$dnase
-  is.bound <- 'B' == cell.df$bound
-  is.ambig <- 'A' == cell.df$bound
-  is.unbnd <- 'U' == cell.df$bound
-  by.bound <- function(FUN) c(
-    FUN(cell.df$dnase[is.bound]),
-    FUN(cell.df$dnase[is.ambig]),
-    FUN(cell.df$dnase[is.unbnd]))
-  dnase.by.bound <- data.frame(bound = factor(c('B', 'A', 'U'), levels = binding.levels), mean = by.bound(mean), sd = by.bound(sd))
-  prop.binding.w.no.dnase <- sum(is.bound & zero.dnase) / sum(is.bound)
-  print(dnase.by.bound)
-  message('Proportion binding with no DNase: ', prop.binding.w.no.dnase)
+#' Analyse each TF
+#'
+analyse.tf <- function(tf.meta) {
+  tf <- tf.meta$TF[1]
+  cell.all <- tf.meta$cell
+  #
+  # Load the binding data
+  #
+  chip <- load.chip.features(tf)
+  #
+  # Load DNase features
+  #
+  dnase <- load.dnase.features(cell.all)
+  #'
+  #' Analyse the DNase levels in the cell aggregated by binding status
+  #'
+  cell.dnase.by.bound <- function(cell.row) {
+    cell <- as.character(cell.row$cell)
+    message(tf, ' : ', cell)
+    cell.bound <- chip[[cell]]
+    cell.dnase <- dnase[[cell]][training.region.test.idxs()]
+    zero.dnase <- 0 == cell.dnase
+    is.bound <- 'B' == cell.bound
+    is.ambig <- 'A' == cell.bound
+    is.unbnd <- 'U' == cell.bound
+    by.bound <- function(FUN) c(
+      FUN(cell.dnase[is.bound]),
+      FUN(cell.dnase[is.ambig]),
+      FUN(cell.dnase[is.unbnd]))
+    data.frame(
+      cell = factor(cell, cell.levels),
+      bound = factor(c('B', 'A', 'U'), levels = binding.levels),
+      prop.zero.dnase = c(
+        sum(is.bound & zero.dnase) / sum(is.bound),
+        sum(is.ambig & zero.dnase) / sum(is.ambig),
+        sum(is.unbnd & zero.dnase) / sum(is.unbnd)),
+      mean = by.bound(mean),
+      sd = by.bound(sd))
+  }
+  tf.meta %>% rowwise() %>% do(cell.dnase.by.bound(.))
 }
+dnase.by.bound <- tfs %>% filter('train' == split) %>% group_by(TF) %>% do(analyse.tf(.)) %>% ungroup()
+dnase.by.bound
+devtools::use_data(dnase.by.bound)
+
+ggplot(dnase.by.bound, aes(x = bound, y = prop.zero.dnase, fill = bound)) +
+  geom_boxplot() +
+  facet_wrap(~ TF, nrow = 4) +
+  scale_fill_few() +
+  theme_few()
+ggsave(file.path('..', 'Plots', 'dnase-by-bound.pdf'))
