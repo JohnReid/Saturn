@@ -6,6 +6,12 @@
 
 
 #
+# Set warnings as errors
+#
+options(warn = 2)
+
+
+#
 # Load libraries
 #
 devtools::load_all()
@@ -15,7 +21,6 @@ library(Saturn)
 #
 # Parse options
 #
-.args <- "../Data/motifs Known"
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
@@ -74,7 +79,7 @@ features <- lapply(motifs,
     hits.gr <- with(motif.hits,
       GRanges(
         seqnames = chrom,
-        ranges = IRanges(start = start, width = str_length(w.mer)),
+        ranges = IRanges(start = start, width = stringr::str_length(w.mer)),
         strand = strand,
         seqinfo = seqinfo(hg19)))
     # Find overlaps with test ranges
@@ -89,7 +94,7 @@ names(features) <- motifs
 #
 # Save features and motif names
 #
-feature.file <- function(m) str_c('motif-', m, '.rds')
+feature.file <- function(m) stringr::str_c('motif-', m, '.rds')
 feature.path <- function(m) file.path(features.dir, feature.file(m))
 motifs.meta <- data.frame(motif = motifs, motif.r = rify(motifs)) %>%
   mutate(feature.file = feature.file(motif))

@@ -6,6 +6,12 @@
 
 
 #
+# Set warnings as errors
+#
+options(warn = 2)
+
+
+#
 # Load libraries
 devtools::load_all()
 library(Saturn)

@@ -3,6 +3,12 @@
 # Parse ChIP label files
 #
 
+
+#
+# Set warnings as errors
+#
+options(warn = 2)
+
 devtools::load_all()
 library(Saturn)
 
