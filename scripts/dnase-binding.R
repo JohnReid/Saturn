@@ -18,13 +18,6 @@ library(ggplot2)
 library(ggthemes)
 
 
-#
-# Which cells do we have data for?
-#
-tf.cells <- tfs %>% filter(TF == tf, 'train' == split)
-cell.all <- tf.cells$cell
-
-
 #' Analyse each TF
 #'
 analyse.tf <- function(tf.meta) {
