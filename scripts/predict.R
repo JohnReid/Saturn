@@ -181,8 +181,8 @@ if (cell.valid %in% names(chip)) {
   idxs.valid <- valid.idxs[training.region.test.idxs()]
   out$bound <- chip.valid['A' != chip.valid & nz.valid & idxs.valid]
 }
-predictions.file <- stringr::str_c('predictions-', as.character(tf),
-                                   '-', as.character(cell.valid), '.tsv')
+predictions.file <- stringr::str_c('predictions.', as.character(tf),
+                                   '.', as.character(cell.valid), '.tsv')
 predictions.path <- file.path(saturn.data(), 'Predictions', predictions.file)
 message('Writing predictions to: ', predictions.path)
 readr::write_tsv(out, predictions.path, col_names = FALSE)

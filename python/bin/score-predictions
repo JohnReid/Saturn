@@ -96,5 +96,5 @@ colnames = ['AUROC', 'AUPRC'] + list(reccols)
 df = pd.DataFrame(data=data, columns=colnames)
 df['file'] = pd.Series(predfiles, index=df.index)
 print(df)
-df.to_csv(tsvfile, sep='\t')
+df.to_csv(tsvfile, sep='\t', index=False)
 
