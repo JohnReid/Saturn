@@ -126,15 +126,13 @@ ggplot(tfs, aes(TF, cell)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
 ```
 
-There are essentially three (two!?) prediction tasks:
-
-- Held-out chromosomes: For each TF/cell-type combination, the ChIP-seq data will
-  not be available for 3 chromosomes. Methods will be assessed by their predictive
-  performance on these chromosomes.
-- Across cell-type: Methods will be assessed by their performance on cell-types for
-  which no training data has been made available (PC-3, induced pluripotent stem
-  cells, liver).
-- Within cell-type: Methods will be assessed on 
+The prediction task boils down to predicting binding of the TF in a cell type
+in which you have no binding data for that specific TF. In addition you are
+evaluated on your predictions only on chromosomes for which you have no data
+for any TF/cell type combination. Liver is by far the most prevalent cell type
+in those cell types used in the evaluation of the final submissions. There is
+no training data for liver for any TFs although it is a ladder cell type for
+ATF3.
 
 
 ## Data
@@ -188,8 +186,9 @@ R $> 3.3$.
 ### Gene expression
 
 Gene expression is regulated by TF binding and so should be useful indirectly to infer binding.
-The major difficulties are that
-- It is known which locations on the genome regulate which genes. Commonly TF binding sites
+The major difficulties are that:
+
+- It is not known which locations on the genome regulate which genes. Commonly TF binding sites
   regulate the closest gene but this is not always the case.
 - Several TFs can combine in an unknown way to regulate a gene.
 - There are other mechanisms of gene regulation that will confound the relationship.
@@ -244,6 +243,6 @@ cells <-
         tissue = factor(tissue),
         karyotype = factor(karyotype),
         sex = factor(sex))
-knitr::kable(cells)
+knitr::kable(cells %>% select(-description, -cell.r))
 # devtools::use_data(cells, overwrite=TRUE)
 ```
