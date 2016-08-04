@@ -38,7 +38,6 @@ stopifnot(dir.exists(scan.dir))
 stopifnot(file.exists(scan.out))
 stopifnot(file.exists(scan.seqs))
 stopifnot(! dir.exists(features.dir))
-dir.create(features.dir)
 
 
 #
@@ -99,6 +98,7 @@ names(features) <- motifs
 # Save features and motif names
 #
 message('Saving features: ', features.dir)
+dir.create(features.dir)
 feature.file <- function(m) stringr::str_c('motif-', m, '.rds')
 feature.path <- function(m) file.path(features.dir, feature.file(m))
 motifs.meta <- data.frame(motif = motifs, motif.r = rify(motifs)) %>%
