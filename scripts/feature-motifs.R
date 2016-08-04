@@ -2,17 +2,33 @@
 #
 # Make features from motif scores
 #
+"Usage: feature-motifs.R MOTIFSDIR MOTIFSTAG" -> doc
 
+
+#
+# Load libraries
+#
 devtools::load_all()
 library(Saturn)
+
+
+#
+# Parse options
+#
+.args <- "../Data/motifs Known"
+if (! exists(".args")) .args <- commandArgs(TRUE)
+opts <- docopt::docopt(doc, args = .args)
+print(opts)
+motifs.dir <- opts[['MOTIFSDIR']]
+motifs.tag <- opts[['MOTIFSTAG']]
+
 
 #
 # Set up file paths
 #
-motifs.dir   <- file.path(saturn.data(), 'motifs')
 motifs.out   <- file.path(motifs.dir, 'steme-pwm-scan.out')
 motifs.seqs  <- file.path(motifs.dir, 'steme-pwm-scan.seqs')
-features.dir <- file.path(saturn.data(), 'Features', 'Motifs', 'Known')
+features.dir <- file.path(saturn.data(), 'Features', 'Motifs', motifs.tag)
 stopifnot(dir.exists(motifs.dir))
 stopifnot(dir.exists(features.dir))
 
@@ -21,17 +37,17 @@ stopifnot(dir.exists(features.dir))
 #
 # Read sequence names
 seqs <-
-  fread(motifs.seqs, col.names = c('length', 'chrom'), header = TRUE) %>%
+  data.table::fread(motifs.seqs, col.names = c('length', 'chrom'), header = TRUE) %>%
   mutate(chrom = factor(chrom, chr.levels))
 sapply(seqs, class)
 # Read hits
 hits <-
-  fread(
+  data.table::fread(
     motifs.out,
     header = TRUE,
     col.names = c('motif', 'w.mer', 'seq', 'start', 'strand', 'Z', 'score', 'p.value'),
-    colClasses=c("character", "character", "integer", "integer",
-                 "character", "numeric", "integer", "numeric")) %>%
+    colClasses = c("character", "character", "integer", "integer",
+                   "character", "numeric", "integer", "numeric")) %>%
   mutate(
     motif = factor(motif),
     chrom = seqs$chrom[seq + 1],  # Use 1-based indexing
@@ -60,7 +76,7 @@ features <- lapply(motifs,
         seqinfo = seqinfo(hg19)))
     # Find overlaps with test ranges
     overlaps <- as.data.frame(findOverlaps(ranges.test(), hits.gr, ignore.strand = TRUE))
-    overlaps$value <- motif.hits$Z[overlaps$subjectHits]
+    overlaps$value <- Z.to.log.BF(motif.hits$Z[overlaps$subjectHits])
     with(
       aggregate(overlaps %>% select(-subjectHits), list(overlaps$queryHits), max),
       Rle.from.sparse(length(ranges.test()), queryHits, value))
