@@ -35,8 +35,6 @@ cell.valid <- factor(opts$VALIDATIONCELL, levels = cell.levels)
 if (is.na(cell.valid)) stop('Unknown validation cell specified.')
 
 
-
-
 #
 # Which cells do we have data for?
 #
@@ -71,13 +69,7 @@ chip <- load.chip.features(tf)
 # Any regions with zero DNase-levels we will assume are
 # non-binding
 #
-dnase <-
-  lapply(
-    cell.all,
-    function(cell) readRDS(file.path(
-      saturn.data(), 'Features', 'DNase',
-      stringr::str_c('dnase-summary-', cell, '.rds'))))
-names(dnase) <- cell.all
+dnase <- load.dnase.features(cell.all)
 non.zero <- lapply(dnase, function(x) x != 0)
 names(non.zero) <- cell.all
 num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
@@ -129,7 +121,7 @@ cell.data <- function(cell) {
         bound = chip[[cell]][keep[regions.train$test.idx]]),
       filter.motif.features(keep))
 }
-df <- Reduce(rbind, lapply(names(dnase), cell.data))
+df <- Reduce(rbind, lapply(colnames(dnase), cell.data))
 # sapply(df, class)
 message('Data size: ', object.size(df))
 
