@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 #
-# Make features from motif scores
+# Make features from motif scan
 #
-"Usage: feature-motifs.R MOTIFSDIR MOTIFSTAG" -> doc
+"Usage: feature-scan.R SCANDIR SCANTAG" -> doc
 
 
 #
@@ -19,17 +19,17 @@ library(Saturn)
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
-motifs.dir <- opts[['MOTIFSDIR']]
-motifs.tag <- opts[['MOTIFSTAG']]
+scan.dir <- opts[['SCANDIR']]
+scan.tag <- opts[['SCANTAG']]
 
 
 #
 # Set up file paths
 #
-motifs.out   <- file.path(motifs.dir, 'steme-pwm-scan.out')
-motifs.seqs  <- file.path(motifs.dir, 'steme-pwm-scan.seqs')
-features.dir <- file.path(saturn.data(), 'Features', 'Motifs', motifs.tag)
-stopifnot(dir.exists(motifs.dir))
+scan.out   <- file.path(scan.dir, 'steme-pwm-scan.out')
+scan.seqs  <- file.path(scan.dir, 'steme-pwm-scan.seqs')
+features.dir <- file.path(saturn.data(), 'Features', 'Motifs', scan.tag)
+stopifnot(dir.exists(scan.dir))
 stopifnot(dir.exists(features.dir))
 
 #
@@ -37,13 +37,13 @@ stopifnot(dir.exists(features.dir))
 #
 # Read sequence names
 seqs <-
-  data.table::fread(motifs.seqs, col.names = c('length', 'chrom'), header = TRUE) %>%
+  data.table::fread(scan.seqs, col.names = c('length', 'chrom'), header = TRUE) %>%
   mutate(chrom = factor(chrom, chr.levels))
 sapply(seqs, class)
 # Read hits
 hits <-
   data.table::fread(
-    motifs.out,
+    scan.out,
     header = TRUE,
     col.names = c('motif', 'w.mer', 'seq', 'start', 'strand', 'Z', 'score', 'p.value'),
     colClasses = c("character", "character", "integer", "integer",
