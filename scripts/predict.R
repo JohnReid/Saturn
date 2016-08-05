@@ -1,13 +1,16 @@
 #!/usr/bin/env Rscript
 #
-# Simple prediction script
+# Simple prediction script. Analyses data from other cell types for a TF to
+# predict binding in the VALIDATIONCELL type.
 #
 "Usage: predict.R TF VALIDATIONCELL
--o --output DIR  specify output directory [default: ./predictions]
--l --ladder      Use ladder cell types [default: FALSE]
--s --submit      Use submission cell types [default: FALSE]
--t --test        Make predictions on all test regions rather
-                 than just the validation chromosomes [default: FALSE]" -> doc
+
+-o --output DIR        Specify output directory [default: ./predictions]
+-l --ladder            Use ladder cell types [default: FALSE]
+-s --submit            Use submission cell types [default: FALSE]
+-m --motifs MOTIFSTAG  Use motif features from MOTIFSTAG motifs [default='Known']
+-t --test              Make predictions on all test regions rather
+                       than just the validation chromosomes [default: FALSE]" -> doc
 
 
 #
@@ -33,6 +36,7 @@ tf <- factor(opts$TF, tf.levels)
 if (is.na(tf)) stop('Unknown TF specified.')
 cell.valid <- factor(opts$VALIDATIONCELL, levels = cell.levels)
 if (is.na(cell.valid)) stop('Unknown validation cell specified.')
+motifs.tag <- opts$motifs
 
 
 #
@@ -75,10 +79,11 @@ names(non.zero) <- cell.all
 num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
 message('# non-zero regions across all cell types: ', num.non.zero)
 
+
 #
-# Load motif features for regions with non-zero DNase
+# Load motif features
 #
-motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', 'Known')
+motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', motifs.tag)
 motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
 #
 # Load Rle motif scores for each motif
@@ -154,7 +159,8 @@ cvfit$lambda.1se
 coef(cvfit, s = "lambda.min")
 coef(cvfit, s = "lambda.1se")
 # Save fit
-fit.file <- stringr::str_c('fit-', as.character(tf), '.', as.character(cell.valid), '.rds')
+fit.id <- stringr::str_c(as.character(tf), '.', as.character(cell.valid), '.', motifs.tag)
+fit.file <- stringr::str_c('fit.', fit.id, '.rds')
 fit.path <- file.path(saturn.data(), 'Predictions', fit.file)
 message('Saving fit: ', fit.path)
 saveRDS(cvfit, fit.path)
@@ -184,8 +190,7 @@ if (cell.valid %in% names(chip)) {
   idxs.valid <- valid.idxs[training.region.test.idxs()]
   out$bound <- chip.valid['A' != chip.valid & nz.valid & idxs.valid]
 }
-predictions.file <- stringr::str_c('predictions.', as.character(tf),
-                                   '.', as.character(cell.valid), '.tsv')
+predictions.file <- stringr::str_c('predictions.', fit.id, '.tsv')
 predictions.path <- file.path(saturn.data(), 'Predictions', predictions.file)
 message('Writing predictions to: ', predictions.path)
 readr::write_tsv(out, predictions.path, col_names = FALSE)
