@@ -117,4 +117,4 @@ ggplot(tf.binding.cors, aes(x = tf.1, y = tf.2, fill = cor)) +
   geom_tile() +
   theme_few() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
-ggsave(file.path('..', 'Plots', 'cor-by-tf.pdf'))
+ggsave(file.path('..', 'Plots', 'cor-across-tfs.pdf'))
