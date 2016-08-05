@@ -34,10 +34,16 @@ scan.tag <- opts[['SCANTAG']]
 scan.out   <- file.path(scan.dir, 'steme-pwm-scan.out')
 scan.seqs  <- file.path(scan.dir, 'steme-pwm-scan.seqs')
 features.dir <- file.path(saturn.data(), 'Features', 'Motifs', scan.tag)
-stopifnot(dir.exists(scan.dir))
+if (! dir.exists(scan.dir)) {
+  message('Scan directory does not exist: ', scan.dir)
+  quit(save = "no")
+}
 stopifnot(file.exists(scan.out))
 stopifnot(file.exists(scan.seqs))
-stopifnot(! dir.exists(features.dir))
+if (dir.exists(features.dir)) {
+  message('Feature directory already exists: ', features.dir)
+  quit(save = "no")
+}
 
 
 #
