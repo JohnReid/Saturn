@@ -153,6 +153,11 @@ cvfit$lambda.min
 cvfit$lambda.1se
 coef(cvfit, s = "lambda.min")
 coef(cvfit, s = "lambda.1se")
+# Save fit
+fit.file <- stringr::str_c('fit-', as.character(tf), '.', as.character(cell.valid), '.rds')
+fit.path <- file.path(saturn.data(), 'Predictions', fit.file)
+message('Saving fit: ', fit.path)
+saveRDS(cvfit, fit.path)
 
 
 #
