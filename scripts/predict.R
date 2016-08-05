@@ -160,8 +160,7 @@ coef(cvfit, s = "lambda.min")
 coef(cvfit, s = "lambda.1se")
 # Save fit
 fit.id <- stringr::str_c(as.character(tf), '.', as.character(cell.valid), '.', motifs.tag)
-fit.file <- stringr::str_c('fit.', fit.id, '.rds')
-fit.path <- file.path(saturn.data(), 'Predictions', fit.file)
+fit.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('fit.', fit.id, '.rds'))
 message('Saving fit: ', fit.path)
 saveRDS(cvfit, fit.path)
 
@@ -183,15 +182,14 @@ out <- data.frame(
   end   = as.integer(df.valid$start + 200),
   pred  = logit.inv(predictions))
 dim(out)
-# Add truth binding values to data frame if we know them
+# Add true binding values to data frame if we know them
 if (cell.valid %in% names(chip)) {
   chip.valid <- chip[[as.character(cell.valid)]]
   nz.valid <- non.zero[[as.character(cell.valid)]][training.region.test.idxs()]
   idxs.valid <- valid.idxs[training.region.test.idxs()]
   out$bound <- chip.valid['A' != chip.valid & nz.valid & idxs.valid]
 }
-predictions.file <- stringr::str_c('predictions.', fit.id, '.tsv')
-predictions.path <- file.path(saturn.data(), 'Predictions', predictions.file)
+predictions.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('predictions.', fit.id, '.tsv'))
 message('Writing predictions to: ', predictions.path)
 readr::write_tsv(out, predictions.path, col_names = FALSE)
 
