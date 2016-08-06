@@ -153,6 +153,7 @@ message('# validation regions: ', nrow(df.valid))
 mat.train <- as(subset(df.train, select = -c(cell, chrom, start, bound)), "Matrix")
 mat.valid <- as(subset(df.valid, select = -c(cell, chrom, start, bound)), "Matrix")
 # Fit a logistic regression
+message('Fitting model')
 glmnet.y <- factor(ifelse(df.train$bound, 'B', 'U'), levels=c('U', 'B'))
 system.time(cvfit <- glmnet::cv.glmnet(mat.train, glmnet.y, family = 'binomial'))
 summary(cvfit)
@@ -184,7 +185,6 @@ out <- data.frame(
   start = df.valid$start,
   end   = as.integer(df.valid$start + 200),
   pred  = logit.inv(predictions))
-dim(out)
 # Add true binding values to data frame if we know them
 if (cell.valid %in% names(chip)) {
   chip.valid <- chip[[as.character(cell.valid)]]
