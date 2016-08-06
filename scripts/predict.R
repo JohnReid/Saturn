@@ -3,14 +3,15 @@
 # Simple prediction script. Analyses data from other cell types for a TF to
 # predict binding in the VALIDATIONCELL type.
 #
-"Usage: predict.R TF VALIDATIONCELL
+"Usage: predict.R [options] TF VALIDATIONCELL
 
--o --output DIR        Specify output directory [default: ./predictions]
--l --ladder            Use ladder cell types [default: FALSE]
--s --submit            Use submission cell types [default: FALSE]
--m --motifs MOTIFSTAG  Use motif features from MOTIFSTAG motifs [default='Known']
--t --test              Make predictions on all test regions rather
-                       than just the validation chromosomes [default: FALSE]" -> doc
+Options:
+  -o --output DIR        Specify output directory [default: ./predictions]
+  -l --ladder            Use ladder cell types [default: FALSE]
+  -s --submit            Use submission cell types [default: FALSE]
+  -m --motifs=<tag>      Use motif features from MOTIFSTAG motifs [default='Known']
+  -t --test              Make predictions on all test regions rather
+                         than just the validation chromosomes [default: FALSE]" -> doc
 
 
 #
@@ -28,7 +29,7 @@ library(Saturn)
 #
 # Parse options
 #
-# .args <- "E2F1 HeLa-S3"
+# .args <- "-m DREME-EGR1 EGR1 GM12878"
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
@@ -84,6 +85,7 @@ message('# non-zero regions across all cell types: ', num.non.zero)
 # Load motif features
 #
 motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', motifs.tag)
+message('Loading motifs from: ', motif.feature.dir)
 motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
 #
 # Load Rle motif scores for each motif
