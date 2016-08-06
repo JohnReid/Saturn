@@ -16,6 +16,7 @@ Imports:
     glmnet (>= 2.0-5),
     PRROC (>= 1.1),
     readr (>= 0.2.2.9),
+    Romulus (>= 1.0.1),
     data.table (>= 1.9.6),
     prg (>= 0.5.1),
     ggplot2 (>= 2.1.0),
