@@ -1,23 +1,19 @@
 #!/usr/bin/env python
-doc = """Usage: submit-predict [-sl]
+#
+# Submit a prediction job for each possible TF/cell combination.
+#
+# Any extra arguments are passed on to the prediction script.
+# %TF% is replaced by the TF name in the arguments.
+#
 
--s --submit   Use submission cell types [default=False].
--l --ladder   Use ladder cell types [default=False].
-"""
-
-from docopt import docopt
+#
+# Import packages
+#
+import sys
 import subprocess
-
 from rpy2.robjects import r
 from rpy2.robjects import pandas2ri
 pandas2ri.activate()
-
-
-#
-# Parse arguments
-#
-opts = docopt(doc)
-print(opts)
 
 
 #
@@ -30,11 +26,7 @@ predictscript = '../python/bin/predict'
 #
 # Set up argments for subprocesses
 #
-cmdargs = ['sbatch', predictscript]
-if opts['--ladder']:
-    cmdargs.append('-l')
-if opts['--submit']:
-    cmdargs.append('-s')
+cmdargs = ['sbatch', predictscript] + sys.argv[1:]
 
 
 #
@@ -50,20 +42,21 @@ tfs = r[objs[0]]
 for tf, group in tfs.groupby('TF'):
     #
     # Filter the group according to the arguments
-    if not opts['--ladder']:
+    if '-l' not in sys.argv and '--ladder' not in sys.argv:
         group = group['ladder' != group.split]
-    if not opts['--submit']:
+    if '-s' not in sys.argv and '--submit' not in sys.argv:
         group = group['submit' != group.split]
     #
     # We need more than one cell type to run the prediction
     if group.shape[0] < 2:
         continue
     #
+    # Define a function to replace %TF% with the TF name
+    def substitutetf(s):
+        return s.replace('%TF%', tf)
+    #
     # Choose each cell type as the validation cell type in turn
     for validcell in group.cell:
-        args = cmdargs + [
-            tf,
-            validcell
-        ]
+        args = list(map(substitutetf, cmdargs + [tf, validcell]))
         print(args)
         subprocess.check_call(args)
