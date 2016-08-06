@@ -66,9 +66,11 @@ fi
 # Run job
 #
 ls -l $POS $NEG
+MAXTIME=$((191 * 60 * 60))
 dreme \
     -png -eps \
     -mink 6 \
+    -t $MAXTIME \
     -p $SEQSDIR/$TF-pos.fa \
     -n $SEQSDIR/$TF-neg.fa \
     -o $SEQSDIR/DREME-$TF
