@@ -87,6 +87,7 @@ message('# non-zero regions across all cell types: ', num.non.zero)
 motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', motifs.tag)
 message('Loading motifs from: ', motif.feature.dir)
 motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
+message('Loaded ', nrow(motifs.meta), ' motifs')
 #
 # Load Rle motif scores for each motif
 motif.features <- lapply(
