@@ -53,7 +53,7 @@ tf.ensembl <-
 # TF Expression
 
 Analyse the expression levels of the TFs across the relevant cell types.
-```{r tfExpr, message = FALSE, fig.width = 10, fig.height = 7}
+```{r tfExpr, message = FALSE, fig.width = 18, fig.height = 12}
 tf.expr <-
     tfs %>%
     dplyr::select(TF, cell, split) %>%
