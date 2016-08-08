@@ -201,15 +201,11 @@ system.time(predictions <- predict(cvfit, mat.valid, s = lambda.predict)[,1])
 # Write predictions in format needed for submission
 valid.keep <- regions.for.cell(cell.valid)
 start <- regions.test$start[as.vector(valid.keep)]
-sum(valid.keep)
-length(start)
-length(predictions)
 out <- data.frame(
   chrom = Rle(regions.test$chrom[valid.keep]),
   start = start,
   end   = start + 200,
   pred  = logit.inv(predictions))
-dim(out)
 # Add true binding values to data frame if we know them
 if (cell.valid %in% names(chip)) {
   chip.valid <- chip[[as.character(cell.valid)]]
