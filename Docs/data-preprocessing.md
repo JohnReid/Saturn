@@ -8,6 +8,8 @@
 - merge technical replicates
 - Wellington footprints
 
+Link expression of TF to footprint quality (see Gusmao et al. 2016 "Association of TF expression with footprint quality")
+
 
 ## Annotations
 
