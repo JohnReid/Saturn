@@ -1,4 +1,3 @@
-
 #' The directory for ChIP features
 #'
 chip.features.dir <- function() file.path(saturn.data(), 'Features', 'ChIP')
@@ -119,3 +118,10 @@ load.chip.peaks <- memoise::memoise(function(cell, tf, type='conservative') {
     file.path(saturn.data(), 'ChIPseq', 'peaks', type,
               stringr::str_c('ChIPseq.', cell, '.', tf, '.', .type, '.narrowPeak.gz'))))
 })
+
+
+#' Drop the ambiguous level from the factor-Rle
+#'
+drop.ambiguous.level <- function(bound) Rle(factor(runValue(bound), levels = c('U', 'B')), runLength(bound))
+
+

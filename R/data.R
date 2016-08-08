@@ -227,6 +227,16 @@ training.region.test.idxs <- memoise::memoise(function() ! Rle(is.na(regions.tes
 ladder.region.test.idxs <- function() ! training.region.test.idxs()
 
 
+#' Convert a factor-Rle that is indexed by the training ranges to a factor-Rle
+#' that is indexed by the test ranges, with NA filling in the missing values
+#'
+train.factor.Rle.to.test <- function(x) {
+  res <- Rle(factor(NA, levels = levels(x)), nrow(regions.test))
+  res[regions.train$test.idx] <- x
+  res
+}
+
+
 #' Convert regions to ranges
 #'
 regions.to.ranges <- function(regions) GRanges(
