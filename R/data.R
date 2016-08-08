@@ -155,29 +155,6 @@ labels.granges <- function(labels) {
 }
 
 
-#' Load expression data.
-saturn.expr <- memoise::memoise(function(cell, biorep) {
-  path <- file.path(
-    saturn.data(), 'RNAseq',
-    sprintf('gene_expression.%s.biorep%d.tsv', cell, biorep))
-  message('Loading: ', path)
-  readr::read_tsv(
-    path, skip = 1, progress = FALSE,
-    col_names = c(
-      'gene_id',
-      'transcript_ids',
-      'length',
-      'effective_length',
-      'expected_count',
-      'TPM',
-      'FPKM'),
-    col_types = cols(
-      gene_id = col_character(),
-      transcript_ids = col_character(),
-      .default = col_double()))
-})
-
-
 #' Load regions from annotations
 #'
 load.regions <- function(name) {
