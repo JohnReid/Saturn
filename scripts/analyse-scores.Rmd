@@ -3,7 +3,7 @@ title: "Analyse scores"
 author: John Reid
 output: html_document
 params:
-  scores.file: scores.tsv
+  scores.file: ../slurm/scores.tsv
 ---
 
 ```{r renderMe, eval = FALSE, echo = FALSE}
@@ -24,7 +24,7 @@ scores.file <- params$scores.file
 scores <- readr::read_tsv(scores.file)
 ```
 
-Parse the filename.
+Parse the filenames.
 ```{r parseFilename}
 parsed <- as.data.frame(stringr::str_split_fixed(basename(scores$file), '\\.', 5)[,2:4])
 colnames(parsed) <- c('TF', 'cell', 'motifs')
@@ -52,5 +52,22 @@ Simple plots.
 ```{r simplePlots}
 ggplot(scores.good, aes(x = motifs.simple, y = AUPRC)) +
     geom_boxplot() +
+    facet_wrap(~ TF) +
+    theme_few()
+ggplot(scores.good, aes(x = motifs.simple, y = recall_05)) +
+    geom_boxplot() +
+    facet_wrap(~ TF) +
+    theme_few()
+ggplot(scores.good, aes(x = motifs.simple, y = recall_10)) +
+    geom_boxplot() +
+    facet_wrap(~ TF) +
+    theme_few()
+ggplot(scores.good, aes(x = motifs.simple, y = recall_25)) +
+    geom_boxplot() +
+    facet_wrap(~ TF) +
+    theme_few()
+ggplot(scores.good, aes(x = motifs.simple, y = recall_50)) +
+    geom_boxplot() +
+    facet_wrap(~ TF) +
     theme_few()
 ```
