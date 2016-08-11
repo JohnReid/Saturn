@@ -63,8 +63,8 @@ if (opts$test) {
 } else {
   chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
 }
-message('Chromosomes for training:   ', stringr::str_c(chrs.train, sep = ', '))
-message('Chromosomes for validation: ', stringr::str_c(chrs.valid, sep = ', '))
+message('Chromosomes for training:   ', paste(chrs.train, sep = ', '))
+message('Chromosomes for validation: ', paste(chrs.valid, sep = ', '))
 
 
 #
