@@ -1,4 +1,5 @@
 docopt
+joblib
 jupyter
 h5py
 pandas

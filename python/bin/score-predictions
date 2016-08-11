@@ -54,6 +54,8 @@ import re
 import saturn.score as score
 import sys
 import os
+from joblib import Parallel, delayed
+import multiprocessing
 
 
 #
@@ -79,10 +81,11 @@ def map_bound_values(b):
     if 'B' == b:
         return 1
 
-#
-# For each predictions file
-#
-for i, predictionsfile in enumerate(predfiles):
+
+def scorefile(predictionsfile):
+    """
+    Score a predictions file.
+    """
     #
     # Load predictions
     #
@@ -98,6 +101,31 @@ for i, predictionsfile in enumerate(predfiles):
     full_results = score.ClassificationResult(labels, scores.round(), scores)
 
     #
+    # Print results
+    #
+    print('AUROC={:.3f}; AUPRC={:.3f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; {}'.format(
+        full_results.auROC,
+        full_results.auPRC,
+        .05, full_results.recall_at_05_fdr,
+        .10, full_results.recall_at_10_fdr,
+        .25, full_results.recall_at_25_fdr,
+        .50, full_results.recall_at_50_fdr,
+        predictionsfile))
+
+    return full_results
+
+#
+# Score each predictions file
+#
+num_cores = multiprocessing.cpu_count()
+results = Parallel(n_jobs=num_cores)(
+    delayed(scorefile)(predictionsfile) for predictionsfile in predfiles)
+
+#
+# Aggregate scores
+#
+for i, full_results in enumerate(results):
+    #
     # Update data
     #
     data[i, 0] = full_results.auROC
@@ -106,18 +134,6 @@ for i, predictionsfile in enumerate(predfiles):
     data[i, 3] = full_results.recall_at_10_fdr
     data[i, 4] = full_results.recall_at_25_fdr
     data[i, 5] = full_results.recall_at_50_fdr
-
-    #
-    # Print results
-    #
-    print('AUROC={:.3f}; AUPRC={:.3f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; {}'.format(
-        data[i, 0],
-        data[i, 1],
-        .05, data[i, 2],
-        .10, data[i, 3],
-        .25, data[i, 4],
-        .50, data[i, 5],
-        predictionsfile))
 
 #
 # Create data frame
