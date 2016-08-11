@@ -9,13 +9,14 @@ import synapseclient
 from synapseclient import Project, Folder, File
 import sys
 import os
+import warnings
 
 
-def download_synid(synid, dest_file):
+def download_synid(synid, filename, dest_file):
     "Download a synapse entity and move it to the destination file."
     entity = syn.get(synid)
-    if entity.name != bam:
-        raise ValueError('{} != {}'.format(entity.name, bam))
+    if entity.name != filename:
+        raise ValueError('{} != {}'.format(entity.name, filename))
     shutil.move(entity.path, dest_file)
     return entity
 
@@ -34,9 +35,13 @@ syn.login()
 #
 # Get one bigwig that changed
 #
-iPSCfile = '../Data/DNASE/fold_coverage_wiggles/DNASE.induced_pluripotent_stem_cell.fc.signal.bigwig'
-os.remove(iPSCfile)
-iPSCentity = download_synid('syn6313524', iPSCfile)
+iPSCfile = 'DNASE.induced_pluripotent_stem_cell.fc.signal.bigwig'
+iPSCpath = os.path.join('../Data/DNASE/fold_coverage_wiggles', iPSCfile)
+if not os.path.exists(iPSCpath):
+    warnings.warn("Destination doesn't exist: {}".format(iPSCpath))
+else:
+    os.remove(iPSCpath)
+iPSCentity = download_synid('syn6313524', iPSCfile, iPSCpath)
 
 
 #
@@ -50,9 +55,10 @@ to_modify = [
 for synid, bam in to_modify:
     dest_file = os.path.join(dest_dir, bam)
     if not os.path.exists(dest_file):
-        raise ValueError("Destination doesn't exist: {}".format(dest_file))
-    os.remove(dest_file)
-    download_synid(synid, dest_file)
+        warnings.warn("Destination doesn't exist: {}".format(dest_file))
+    else:
+        os.remove(dest_file)
+    download_synid(synid, bam, dest_file)
 
 
 #
@@ -72,7 +78,7 @@ for synid, bam in to_add:
     dest_file = os.path.join(dest_dir, bam)
     if os.path.exists(dest_file):
         raise ValueError('Destination already exists: {}'.format(dest_file))
-    download_synid(synid, dest_file)
+    download_synid(synid, bam, dest_file)
 
 
 #
