@@ -3,13 +3,14 @@
 # Simple prediction script. Analyses data from other cell types for a TF to
 # predict binding in the VALIDATIONCELL type.
 #
-"Usage: predict.R [options] TF VALIDATIONCELL
+"Usage:
+predict.R [--options] [--motifs=TAG ...] TF VALIDATIONCELL
 
 Options:
   -o --output DIR        Specify output directory [default: ./predictions]
   -l --ladder            Use ladder cell types [default: FALSE]
   -s --submit            Use submission cell types [default: FALSE]
-  -m --motifs=<tag>      Use motif features from MOTIFSTAG motifs [default='Known']
+  -m --motifs=TAG ...    Use motif features from TAG motifs [default='Known']
   -t --test              Make predictions on all test regions rather
                          than just the validation chromosomes [default: FALSE]" -> doc
 
@@ -29,7 +30,8 @@ library(Saturn)
 #
 # Parse options
 #
-# .args <- "-m Known EGR1 GM12878"
+# .args <- "--motif=Known --motif=Known2 GATA3 A549"
+# Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
@@ -37,7 +39,7 @@ tf <- factor(opts$TF, tf.levels)
 if (is.na(tf)) stop('Unknown TF specified.')
 cell.valid <- factor(opts$VALIDATIONCELL, levels = cell.levels)
 if (is.na(cell.valid)) stop('Unknown validation cell specified.')
-motifs.tag <- opts$motifs
+motifs.tags <- opts$motifs
 
 
 #
@@ -61,8 +63,8 @@ if (opts$test) {
 } else {
   chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
 }
-message('Chromosomes for training:   ', chrs.train)
-message('Chromosomes for validation: ', chrs.valid)
+message('Chromosomes for training:   ', stringr::str_c(chrs.train, sep = ', '))
+message('Chromosomes for validation: ', stringr::str_c(chrs.valid, sep = ', '))
 
 
 #
@@ -83,21 +85,24 @@ dnase <- load.dnase.features(cell.all)
 #
 # Load motif features
 #
-motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', motifs.tag)
-message('Loading motifs from: ', motif.feature.dir)
-motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
-message('Loaded ', nrow(motifs.meta), ' motifs')
-#
-# Load Rle motif scores for each motif
-motif.features <- lapply(
-  1:nrow(motifs.meta),
-  function(i) readRDS(file.path(motif.feature.dir, basename(motifs.meta$feature.file[i]))))
-names(motif.features) <- motifs.meta$motif
-filter.motif.features <- function(keep) {
-  motif.keep <- lapply(motif.features, function(f) f[keep])
-  names(motif.keep) <- names(motif.features)
-  do.call(S4Vectors::DataFrame, motif.keep)
+load.motif.features <- function(motifs.tag) {
+  motif.feature.dir <- file.path(saturn.data(), 'Features', 'Motifs', motifs.tag)
+  message('Loading motifs from: ', motif.feature.dir)
+  motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
+  message('Loaded ', nrow(motifs.meta), ' motifs')
+  #
+  # Load Rle motif scores for each motif
+  motif.features <- lapply(
+    1:nrow(motifs.meta),
+    function(i) readRDS(file.path(motif.feature.dir, basename(motifs.meta$feature.file[i]))))
+  names(motif.features) <- motifs.meta$motif
+  filter.motif.features <- function(keep) {
+    motif.keep <- lapply(motif.features, function(f) f[keep])
+    names(motif.keep) <- names(motif.features)
+    do.call(S4Vectors::DataFrame, motif.keep)
+  }
 }
+motif.features <- lapply(motifs.tags, load.motif.features)
 
 
 #
@@ -133,6 +138,8 @@ cell.data <- function(cell) {
   message('Wrangling data for: ', cell)
   # Work out which regions to keep (ignore ambiguously bound regions)
   keep <- regions.for.cell(cell)
+  # Get all the motif features
+  motif.feats <- do.call(cbind, lapply(motif.features, function(feat) feat(keep)))
   # Return S4Vectors::DataFrame
   cbind(
     S4Vectors::DataFrame(
@@ -141,7 +148,7 @@ cell.data <- function(cell) {
       # start = regions.test$start[as.vector(keep)],
       dnase = Rle(dnase[[as.character(cell)]][keep]),
       bound = chip[[as.character(cell)]][keep]),
-    filter.motif.features(keep))
+    motif.feats)
 }
 #' Remove ambiguously bound regions from DataFrames
 #'
@@ -182,7 +189,8 @@ cvfit$lambda.1se
 coef(cvfit, s = "lambda.min")
 coef(cvfit, s = "lambda.1se")
 # Save fit
-fit.id <- stringr::str_c(as.character(tf), '.', as.character(cell.valid), '.', motifs.tag)
+motifs.id <- do.call(stringr::str_c, c(motifs.tags, list(sep = "_")))
+fit.id <- stringr::str_c(as.character(tf), '.', as.character(cell.valid), '.', motifs.id)
 fit.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('fit.', fit.id, '.rds'))
 message('Saving fit: ', fit.path)
 saveRDS(cvfit, fit.path)
