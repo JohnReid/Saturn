@@ -6,20 +6,54 @@ Options:
 """
 
 
+def score_main(submission_fname):
+    # load and parse the submitted filename
+    print(score.fname_pattern)
+    res = re.findall(score.fname_pattern, os.path.basename(submission_fname))
+    if len(res) != 1 or len(res[0]) != 3:
+        raise score.InputError, "The submitted filename ({}) does not match expected naming pattern '{}'".format(
+            submission_fname, score.fname_pattern)
+    else:
+        submission_type, factor, cell_line = res[0]
+
+    # find a matching validation file
+    labels_fname = os.path.join(
+        VALIDATION_LABELS_BASEDIR, "{}.labels.tsv.gz".format(factor))
+    # validate that the matching file exists and that it contains labels that
+    # match the submitted sample
+    header_data = None
+    try:
+        with gzip.open(labels_fname) as fp:
+            header_data = next(fp).split()
+    except IOError:
+        raise score.InputError("The submitted factor, sample combination ({}, {}) is not a valid leaderboard submission.".format(
+            factor, cell_line))
+
+    # Make sure the header looks right
+    assert header_data[:3] == ['chr', 'start', 'stop']
+    labels_file_samples = header_data[3:]
+    # We only expect to see one sample per leaderboard sample
+    if cell_line not in labels_file_samples:
+        raise score.InputError("The submitted factor, sample combination ({}, {}) is not a valid leaderboard submission.".format(
+            factor, cell_line))
+
+    label_index = labels_file_samples.index(cell_line)
+    labels, scores = verify_file_and_build_scores_array(
+        labels_fname, submission_fname, label_index)
+    full_results = ClassificationResult(labels, scores.round(), scores)
+    return full_results
+
+
 #
 # Load libraries
 #
 from docopt import docopt
-from sklearn.metrics import precision_recall_curve, roc_curve, auc
 import pandas as pd
 import numpy as np
-
-
-def recall_at_fdr(fdr_cutoff=0.05):
-    "Calculate the recall at a given FDR."
-    fdr = 1 - precision
-    cutoff_index = next(i for i, x in enumerate(1 - precision) if x <= fdr_cutoff)
-    return recall[cutoff_index]
+import re
+import saturn.score as score
+import sys
+import os
 
 
 #
@@ -37,6 +71,14 @@ fdr_cutoffs = (.05, .10, .25, .50)
 data = np.empty((len(predfiles), 2 + len(fdr_cutoffs)))
 
 
+def map_bound_values(b):
+    if 'U' == b:
+        return 0
+    if 'A' == b:
+        return -1
+    if 'B' == b:
+        return 1
+
 #
 # For each predictions file
 #
@@ -46,56 +88,43 @@ for i, predictionsfile in enumerate(predfiles):
     #
     predictions = pd.read_table(
         predictionsfile,
-        names = ['chrom', 'start', 'end', 'pred', 'bound'])
-    y_true = (predictions.bound == 'B').values
-    y_score = predictions.pred.values
-
-
-    #
-    # Do ROC analysis
-    #
-    fpr, tpr, rocthresholds = roc_curve(y_true, y_score)
-    auroc = auc(fpr, tpr)
-
+        names=['chrom', 'start', 'end', 'pred', 'bound'])
+    labels = np.array(map(map_bound_values, predictions.bound.values))
+    scores = predictions.pred.values
 
     #
-    # Do precision-recall analysis
+    # Score predictions
     #
-    precision, recall, prthresholds = precision_recall_curve(y_true, y_score)
-    auprc = auc(recall, precision)
-
-
-    #
-    # Analyse recall at different FDRs
-    #
-    recallatcutoffs = map(recall_at_fdr, fdr_cutoffs)
-
+    full_results = score.ClassificationResult(labels, scores.round(), scores)
 
     #
     # Update data
     #
-    data[i,0] = auroc
-    data[i,1] = auprc
-    data[i,2:] = recallatcutoffs
+    data[i, 0] = full_results.auROC
+    data[i, 1] = full_results.auPRC
+    data[i, 2] = full_results.recall_at_05_fdr
+    data[i, 3] = full_results.recall_at_10_fdr
+    data[i, 4] = full_results.recall_at_25_fdr
+    data[i, 5] = full_results.recall_at_50_fdr
 
     #
     # Print results
     #
     print('AUROC={:.3f}; AUPRC={:.3f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; {}'.format(
-        auroc, auprc,
-        fdr_cutoffs[0], recallatcutoffs[0],
-        fdr_cutoffs[1], recallatcutoffs[1],
-        fdr_cutoffs[2], recallatcutoffs[2],
-        fdr_cutoffs[3], recallatcutoffs[3],
+        data[i, 0],
+        data[i, 1],
+        .05, data[i, 2],
+        .10, data[i, 3],
+        .25, data[i, 4],
+        .50, data[i, 5],
         predictionsfile))
 
 #
 # Create data frame
 #
-reccols = map(lambda c: 'recall_{:02d}'.format(int(100*c)), fdr_cutoffs)
+reccols = map(lambda c: 'recall_{:02d}'.format(int(100 * c)), fdr_cutoffs)
 colnames = ['AUROC', 'AUPRC'] + list(reccols)
 df = pd.DataFrame(data=data, columns=colnames)
 df['file'] = pd.Series(predfiles, index=df.index)
 print(df)
 df.to_csv(tsvfile, sep='\t', index=False)
-
