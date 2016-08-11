@@ -1,0 +1,56 @@
+---
+title: "Analyse scores"
+author: John Reid
+output: html_document
+params:
+  scores.file: scores.tsv
+---
+
+```{r renderMe, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render("analyse-scores.Rmd")
+```
+
+Load the scores.
+```{r loadScores}
+library(Saturn)
+library(ggplot2)
+library(ggthemes)
+scores.file <- params$scores.file
+# scores.file <- '../slurm/scores.tsv'
+scores <- readr::read_tsv(scores.file)
+```
+
+Parse the filename.
+```{r parseFilename}
+parsed <- as.data.frame(stringr::str_split_fixed(basename(scores$file), '\\.', 5)[,2:4])
+colnames(parsed) <- c('TF', 'cell', 'motifs')
+parsed <-
+    parsed %>%
+    mutate(
+        TF = factor(TF, tf.levels),
+        cell.valid = factor(cell, cell.levels),
+        motifs.simple = factor(stringr::str_replace(motifs, 'DREME-.+', 'DREME')))
+sapply(parsed, class)
+scores <- cbind(scores, parsed)
+```
+
+Filter those TFs/cell combos for which we have all the motif tags.
+```{r filterHaveAll}
+have.all.motif.tags <-
+    scores %>%
+    group_by(TF, cell.valid) %>%
+    summarise(n = n()) %>%
+    filter(length(levels(scores$motifs.simple)) == n)
+scores.good <- have.all.motif.tags %>% left_join(scores)
+```
+
+Simple plots.
+```{r simplePlots}
+ggplot(scores.good, aes(x = motifs.simple, y = AUPRC)) +
+    geom_boxplot() +
+    theme_few()
+```
