@@ -1,14 +1,23 @@
+#
+# For general interaction and scripting
 docopt
-cython
 joblib
 jupyter
+pyzmq
 h5py
 pandas
 rpy2
 sklearn
-keras
-pyzmq
 neovim
+#
+# For HINT
+cython
+ngslib
+#
+# For neural networks
+keras
+#
+# For bioinformatics
 biopython
 pyBigWig
 # Install John's fork of pyprg
