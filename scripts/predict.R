@@ -28,6 +28,7 @@ library(Saturn)
 # Parse options
 #
 # .args <- "--motif=Known ARID3A K562"
+# .args <- "--motif=Known GATA3 A549"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
@@ -69,14 +70,15 @@ message('Validation cell split: ', as.character(valid.split))
 # Which cells do we have data for?
 #
 if ('ladder' == valid.split) {
-  tf.cells %>% filter(split != 'submit')
+  tf.cells <- tf.cells %>% filter(split != 'submit')
 } else if ('submit' == valid.split) {
-  tf.cells %>% filter(split != 'ladder')
+  tf.cells <- tf.cells %>% filter(split != 'ladder')
 } else if ('train' == valid.split) {
-  tf.cells %>% filter(split != 'ladder', split != 'submit')
+  tf.cells <- tf.cells %>% filter(split != 'ladder', split != 'submit')
 } else {
   stop('Validation cell split must be one of "train", "ladder" or "submit"')
 }
+print(tf.cells)
 cell.all <- tf.cells$cell
 if (! cell.valid %in% cell.all) stop('We have no data for the validation cell type and this TF.')
 cell.train <- filter(tf.cells, cell != cell.valid)$cell
