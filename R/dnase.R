@@ -57,6 +57,20 @@ load.dnase.peaks <- memoise::memoise(function(cell, type='conservative') {
 })
 
 
+#' File path for DNase signal
+#'
+dnase.signal.file <- function(cell) file.path(
+  saturn.data(), 'DNASE', 'fold_coverage_wiggles',
+  stringr::str_c('DNASE.', cell, '.fc.signal.bigwig'))
+
+
+#' Load DNase signal
+#'
+load.dnase.signal <- memoise::memoise(function(cell) {
+  rtracklayer::import(dnase.signal.file)
+})
+
+
 #' Summarise DNase peaks by ChIP-regions
 #'
 summarise.dnase <- function(cell, type='conservative', aggregation.fn=max) {

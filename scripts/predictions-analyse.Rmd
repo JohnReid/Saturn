@@ -64,6 +64,14 @@ preds$chip.peak <- agg.by.region(peaks, preds.ranges, 'peak', max)
 ```
 
 
+Check correlations
+```{r checkCor}
+with(preds, cor(as.integer(bound), as.vector(chip.qvalue)))
+with(preds, cor(as.integer(bound), as.vector(chip.signal)))
+with(preds, cor(as.integer(bound), as.vector(chip.peak)))
+```
+
+
 Plot predictions against ChIP values.
 ```{r plotPredvsChIP}
 preds.df <- as.data.frame(subset(preds, !(chip.signal == 0 & pred <= 0.25)))
@@ -78,10 +86,33 @@ ggplot(preds.df, aes(x = pred)) +
     geom_rug() +
     theme_few()
 
-ggplot(preds.df, aes(x = chip.signal, y = pred, color = chip.qvalue)) +
-    geom_jitter(width = 0) +
+ggplot(preds.df, aes(x = chip.signal, y = pred, colour = bound)) +
+    geom_point(alpha = .5) +
+    theme_few()
+
+ggplot(preds.df, aes(x = chip.qvalue, y = pred, color = log10(chip.signal), shape = bound)) +
+    geom_point() +
     theme_few()
 ```
+
+
+# A false negative
+
+```{r falseNeg}
+library(ggbio)
+false.neg <-
+    preds.df %>%
+    filter(pred < .25, 'B' == bound) %>%
+    sample_n(1)
+false.neg
+false.neg.ranges <- regions.to.ranges(false.neg)
+dnase.wiggle <- rtracklayer::import(dnase.signal.file(cell.valid), selection = false.neg.ranges)
+autoplot(dnase.wiggle, geom = "bar", aes(y = score)) +
+    theme_few()
+```
+
+
+# A false positive
 
 
 # Session information
