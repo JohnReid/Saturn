@@ -66,7 +66,8 @@ preds$chip.peak <- agg.by.region(peaks, preds.ranges, 'peak', max)
 
 Plot predictions against ChIP values.
 ```{r plotPredvsChIP}
-preds.df <- as.data.frame(preds)
+preds.df <- as.data.frame(subset(preds, !(chip.signal == 0 & pred <= 0.25)))
+nrow(preds.df)
 ggplot(preds.df, aes(x = chip.signal)) +
     geom_density() +
     geom_rug() +
@@ -77,7 +78,7 @@ ggplot(preds.df, aes(x = pred)) +
     geom_rug() +
     theme_few()
 
-ggplot(preds.df, aes(x = chip.signal, y = pred)) +
+ggplot(preds.df, aes(x = chip.signal, y = pred, color = chip.qvalue)) +
     geom_jitter(width = 0) +
     theme_few()
 ```
