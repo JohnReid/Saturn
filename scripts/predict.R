@@ -226,6 +226,7 @@ message('Fitting model')
 response <- as.factor(drop.ambiguous.level(df.train.nz$bound))
 rm(df.train)  # No longer needed
 system.time(cvfit <- glmnet::cv.glmnet(mat.train, response, family = 'binomial'))
+rm(mat.train)  # No longer needed
 summary(cvfit)
 # plot(cvfit)
 cvfit$lambda.min
@@ -242,6 +243,7 @@ saveRDS(cvfit, fit.path)
 #
 lambda.predict <- "lambda.min"
 system.time(predictions <- predict(cvfit, mat.valid, s = lambda.predict)[,1])
+rm(mat.valid)  # No longer needed
 # ggplot2::qplot(predictions) + ggplot2::scale_y_log10()
 
 
