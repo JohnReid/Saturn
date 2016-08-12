@@ -111,7 +111,7 @@ load.chip.labels <- memoise::memoise(function(tf) labels.granges(read.chip.label
 
 
 #' Load ChIP peaks
-load.chip.peaks <- memoise::memoise(function(cell, tf, type='conservative') {
+load.chip.peaks <- memoise::memoise(function(cell, tf, type = 'conservative') {
   if ('conservative' == type) .type <- 'conservative.train'
   else .type <- type
   narrowpeak.granges(load.narrowpeak(
@@ -125,3 +125,13 @@ load.chip.peaks <- memoise::memoise(function(cell, tf, type='conservative') {
 drop.ambiguous.level <- function(bound) Rle(factor(runValue(bound), levels = c('U', 'B')), runLength(bound))
 
 
+#' Summarise ChIP peaks by test regions
+#'
+summarise.chip.peaks <- function(cell, tf, type='conservative', aggregation.fn=max) {
+  # Aggregate
+  agg.by.region(
+    load.chip.peaks(cell, tf, type),
+    ranges.test(),
+    'pValue',
+    aggregation.fn)
+}
