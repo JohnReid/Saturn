@@ -265,7 +265,7 @@ out <-
 # Add true binding values to data frame if we know them
 if (cell.valid %in% names(chip)) {
   chip.valid <- chip[[as.character(cell.valid)]]
-  out$bound <- chip.valid[valid.keep]
+  out$bound <- as.factor(chip.valid[valid.keep])
 }
 message('Writing predictions to: ', predictions.path)
 readr::write_tsv(out %>% arrange(chrom, start), predictions.path, col_names = FALSE)
