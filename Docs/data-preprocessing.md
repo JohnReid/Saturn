@@ -15,7 +15,7 @@ Download the BAM files from synapse:
 
 Index the downloaded BAM files:
 
-    submit-index
+    bams-list | submit-index
 
 Merge the technical replicates:
 
