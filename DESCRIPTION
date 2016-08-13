@@ -4,7 +4,8 @@ Version: 0.0.0.9000
 Authors@R: c(person("John", "Reid", role = c("aut", "cre"),
                     email = "johnbaronreid@gmail.com"))
 Description: Model TF-binding in the DREAM-ENCODE challenge.
-Depends: R (>= 3.2.5),
+Depends:
+    R (>= 3.2.5),
     GenomicRanges (>= 1.22.4),
     dplyr (>= 0.5.0.9000),
     reshape2 (>= 1.4.1),
@@ -29,3 +30,4 @@ Imports:
 License: MIT
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 5.0.1

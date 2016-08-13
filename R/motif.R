@@ -1,3 +1,6 @@
+#' @import data.table
+#'
+
 .PRIOR <- 1e-3
 .PRIOR.LOG.ODDS <- log10(.PRIOR) - log10(1 - .PRIOR)
 .MAX.LOG.BF <- 10
@@ -17,11 +20,20 @@ load.motif.dir <- function(
   prior.log.odds = .PRIOR.LOG.ODDS,
   maximum.BF = 10)
 {
-  load.motif.scan(
-    results.path = file.path(motifs.dir, 'steme-pwm-scan.out'),
-    seqs.path = file.path(motifs.dir, 'steme-pwm-scan.seqs'),
-    prior.log.odds,
-    maximum.BF)
+  scan.cache <- file.path(motifs.dir, 'scan-gr.rds')
+  if (file.exists(scan.cache)) {
+    message('Loading motif scan from cache: ', scan.cache)
+    readRDS(scan.cache)
+  } else {
+    motif.scan <- load.motif.scan(
+      results.path = file.path(motifs.dir, 'steme-pwm-scan.out'),
+      seqs.path = file.path(motifs.dir, 'steme-pwm-scan.seqs'),
+      prior.log.odds,
+      maximum.BF)
+    message('Saving motif scan to cache: ', scan.cache)
+    saveRDS(motif.scan, scan.cache)
+    motif.scan
+  }
 }
 
 
@@ -33,6 +45,7 @@ load.motif.scan <- memoise::memoise(function(
   prior.log.odds = .PRIOR.LOG.ODDS,
   maximum.BF = 10)
 {
+  library(data.table)
   motif.seqs <- readr::read_csv(
     seqs.path, skip = 1, progress = FALSE,
     col_names = c('length', 'ID'),
@@ -54,26 +67,28 @@ load.motif.scan <- memoise::memoise(function(
         'integer',
         'numeric',
         'integer',
-        'numeric')) %>%
-    mutate(
-      motif = factor(rify(motif)),
-      chr = motif.seqs$ID[seq+1],
-      end = position + stringr::str_length(w.mer),
-      logBF = Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF),
-      neg.log.p = -log10(p.value))
+        'numeric'))
+  message('Mutating')
+  motif.scan[, motif := factor(rify(motif))]
+  motif.scan[, chr := factor(motif.seqs$ID[seq + 1], levels = chr.levels)]
+  motif.scan[, logBF := Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF)]
+  motif.scan[, neg.log.p := -log10(p.value)]
+  message('Sorting')
+  setkey(motif.scan, chr, position)
   motif.names <- levels(motif.scan$motif)
+  message('Creating GRanges')
   scans <- lapply(
     motif.names,
     function(m) with(
       filter(motif.scan, motif == m),
-      sort(GRanges(
+      GRanges(
         seqnames = S4Vectors::Rle(chr),
-        ranges = IRanges(start = position + 1, end = end),
+        ranges = IRanges(start = position + 1, end = position + stringr::str_length(w.mer[1])),
         strand = strand,
         seqinfo = seqinfo(hg19),
         Z = Z,
         logBF = logBF,
-        neg.log.p = neg.log.p))))
+        neg.log.p = neg.log.p)))
   names(scans) <- motif.names
   scans
 })

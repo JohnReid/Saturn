@@ -39,8 +39,8 @@ binding.levels <- c('U', 'A', 'B')
 hg19 <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
 
 
-#' Convert from Rle to one column matrix
-#'
+# Convert from Rle to one column matrix
+#
 setAs("Rle", "Matrix", function(from) {
     rv <- runValue(from)
     nz <- rv != 0
@@ -50,11 +50,11 @@ setAs("Rle", "Matrix", function(from) {
 })
 
 
-#' Convert from DataFrame of Rle to sparse Matrix
-#'
-#' Conversion from DataFrame of Rle to sparse Matrix
-#' from: https://support.bioconductor.org/p/66586/#85609
-#'
+# Convert from DataFrame of Rle to sparse Matrix
+#
+# Conversion from DataFrame of Rle to sparse Matrix
+# from: https://support.bioconductor.org/p/66586/#85609
+#
 setAs("DataFrame", "Matrix", function(from) {
   mat = do.call(cbind, lapply(from, as, "Matrix"))
   colnames(mat) <- colnames(from)
