@@ -1,5 +1,5 @@
 ---
-title: "Analyse a set of predictions
+title: "Analyse a set of predictions"
 author: John Reid
 output: pdf_document
 params:
@@ -32,12 +32,29 @@ if (exists('params', inherits = FALSE)) {
 ```
 
 
+# Motif scans
+
+Load motif scans.
+```{r loadMotifScans}
+system.time(motif.scan <- load.motif.dir('../Data/motifs'))
+object.size(motif.scan)
+motif.scan[['CTCF_full']]
+# motif.dir <- '../Data/motifs'
+# results.path <- file.path(motif.dir, 'steme-pwm-scan.out')
+# seqs.path <- file.path(motif.dir, 'steme-pwm-scan.seqs')
+```
+
+
+# Predictions
+
 Load predictions
 ```{r loadPreds}
+tags <- parse.predictions.file(predictions.file)
 preds <- with(
     readr::read_tsv(
         predictions.file,
-        col_names = c('chrom', 'start', 'end', 'pred', 'bound')),
+        col_names = c('chrom', 'start', 'end', 'pred', 'bound'),
+        progress = FALSE),
     DataFrame(
         chrom = Rle(factor(chrom, levels = chr.levels)),
         start = start,
@@ -48,6 +65,8 @@ preds.ranges <- regions.to.ranges(preds)
 mcols(preds.ranges) <- subset(preds, select = -c(chrom, start))
 ```
 
+
+# ChIP
 
 Load the ChIP peak levels for the test regions.
 ```{r loadChIP}
@@ -71,6 +90,8 @@ with(preds, cor(as.integer(bound), as.vector(chip.signal)))
 with(preds, cor(as.integer(bound), as.vector(chip.peak)))
 ```
 
+
+# Plots
 
 Plot predictions against ChIP values.
 ```{r plotPredvsChIP}
@@ -107,8 +128,7 @@ false.neg <-
 false.neg
 false.neg.ranges <- regions.to.ranges(false.neg)
 dnase.wiggle <- rtracklayer::import(dnase.signal.file(cell.valid), selection = false.neg.ranges)
-autoplot(dnase.wiggle, geom = "bar", aes(y = score)) +
-    theme_few()
+autoplot(dnase.wiggle, geom = "step", aes(y = score)) + theme_few()
 ```
 
 

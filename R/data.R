@@ -299,3 +299,14 @@ Rle.from.sparse <- function(len, idxs, x) {
   # Some of the lengths will be zero, ignore them and their values
   S4Vectors::Rle(.vals[pos.lens], .lens[pos.lens])
 }
+
+
+#' Parse predictions file name
+#'
+parse.predictions.file <- function(file.name) {
+  fields <- stringr::str_split_fixed(basename(file.name), stringr::fixed('.'), 5)
+  list(
+    tf = fields[2],
+    cell = fields[3],
+    motif.tags = stringr::str_split(fields[4], stringr::fixed('_')))
+}

@@ -10,6 +10,21 @@ Z.to.log.BF <- function(Z, prior.log.odds = .PRIOR.LOG.ODDS, maximum = .MAX.LOG.
 }
 
 
+#' Load motif scan results from directory
+#'
+load.motif.dir <- function(
+  motifs.dir,
+  prior.log.odds = .PRIOR.LOG.ODDS,
+  maximum.BF = 10)
+{
+  load.motif.scan(
+    results.path = file.path(motifs.dir, 'steme-pwm-scan.out'),
+    seqs.path = file.path(motifs.dir, 'steme-pwm-scan.seqs'),
+    prior.log.odds,
+    maximum.BF)
+}
+
+
 #' Load motif scan results
 #'
 load.motif.scan <- memoise::memoise(function(
@@ -21,36 +36,46 @@ load.motif.scan <- memoise::memoise(function(
   motif.seqs <- readr::read_csv(
     seqs.path, skip = 1, progress = FALSE,
     col_names = c('length', 'ID'),
-    col_types = cols(length=col_integer(), ID = col_character()))
+    col_types = readr::cols(length = readr::col_integer(), ID = readr::col_character()))
   message('Loading: ', results.path)
-  readr::read_csv(
-    results.path, skip = 1, progress = FALSE,
-    col_names = c('motif', 'w.mer', 'seq', 'position', 'strand',
-                  'Z', 'score', 'p.value'),
-    col_types = cols(
-      motif = col_character(),
-      w.mer = col_character(),
-      seq = col_integer(),
-      position = col_integer(),
-      strand = col_character(),
-      Z = col_double(),
-      score = col_integer(),
-      p.value = col_double())) %>%
-    mutate(motif = rify(motif),
-           chr = motif.seqs$ID[seq+1],
-           end = position + stringr::str_length(w.mer),
-           logBF = Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF),
-           neg.log.p = -log10(p.value)) %>%
-  group_by(motif) %>%
-  do(gr = with(.,
-    GRanges(
-      seqnames = S4Vectors::Rle(chr),
-      ranges = IRanges(start = position+1, end = end),
-      strand = strand,
-      seqinfo = seqinfo(hg19),
-      Z = Z,
-      logBF = logBF,
-      neg.log.p = neg.log.p)))
+  motif.scan <-
+    data.table::fread(
+      results.path,
+      sep = ',',
+      showProgress = FALSE,
+      verbose = FALSE,
+      col.names = c('motif', 'w.mer', 'seq', 'position', 'strand',
+                    'Z', 'score', 'p.value'),
+      colClasses = c(
+        'character',
+        'character',
+        'integer',
+        'integer',
+        'integer',
+        'numeric',
+        'integer',
+        'numeric')) %>%
+    mutate(
+      motif = factor(rify(motif)),
+      chr = motif.seqs$ID[seq+1],
+      end = position + stringr::str_length(w.mer),
+      logBF = Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF),
+      neg.log.p = -log10(p.value))
+  motif.names <- levels(motif.scan$motif)
+  scans <- lapply(
+    motif.names,
+    function(m) with(
+      filter(motif.scan, motif == m),
+      sort(GRanges(
+        seqnames = S4Vectors::Rle(chr),
+        ranges = IRanges(start = position + 1, end = end),
+        strand = strand,
+        seqinfo = seqinfo(hg19),
+        Z = Z,
+        logBF = logBF,
+        neg.log.p = neg.log.p))))
+  names(scans) <- motif.names
+  scans
 })
 
 
