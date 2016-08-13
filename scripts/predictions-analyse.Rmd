@@ -97,21 +97,21 @@ Plot predictions against ChIP values.
 ```{r plotPredvsChIP}
 preds.df <- as.data.frame(subset(preds, !(chip.signal == 0 & pred <= 0.25)))
 nrow(preds.df)
-ggplot(preds.df, aes(x = chip.signal)) +
+ggplot(preds.df %>% sample_n(10000), aes(x = chip.signal)) +
     geom_density() +
     geom_rug() +
     theme_few()
 
-ggplot(preds.df, aes(x = pred)) +
+ggplot(preds.df %>% sample_n(10000), aes(x = pred)) +
     geom_density() +
     geom_rug() +
     theme_few()
 
-ggplot(preds.df, aes(x = chip.signal, y = pred, colour = bound)) +
+ggplot(preds.df %>% sample_n(10000), aes(x = chip.signal, y = pred, colour = bound)) +
     geom_point(alpha = .5) +
     theme_few()
 
-ggplot(preds.df, aes(x = chip.qvalue, y = pred, color = log10(chip.signal), shape = bound)) +
+ggplot(preds.df %>% sample_n(10000) , aes(x = chip.qvalue, y = pred, color = log10(chip.signal), shape = bound)) +
     geom_point() +
     theme_few()
 ```
