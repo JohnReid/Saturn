@@ -36,10 +36,11 @@ if (exists('params', inherits = FALSE)) {
 
 Load motif scans.
 ```{r loadMotifScans}
-system.time(motif.scan <- load.motif.dir('../Data/motifs'))
+# motif.dir <- '../Data/motifs'
+motif.dir <- '../Data/ChIPseq/seqs/DREME-NANOG/genome-scan'
+system.time(motif.scan <- load.motif.dir(motif.dir))
 object.size(motif.scan)
 motif.scan[['CTCF_full']]
-# motif.dir <- '../Data/motifs'
 # results.path <- file.path(motif.dir, 'steme-pwm-scan.out')
 # seqs.path <- file.path(motif.dir, 'steme-pwm-scan.seqs')
 ```
