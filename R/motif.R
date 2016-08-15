@@ -37,6 +37,11 @@ load.motif.dir <- function(
 }
 
 
+#' The directory for the scan given by motif.tag
+#'
+motif.dir <- function(motif.tag) file.path(saturn.data(), 'Motifs', motif.tag)
+
+
 #' Load motif scan results
 #'
 load.motif.scan <- memoise::memoise(function(
