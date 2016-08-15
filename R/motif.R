@@ -50,7 +50,6 @@ load.motif.scan <- memoise::memoise(function(
   prior.log.odds = .PRIOR.LOG.ODDS,
   maximum.BF = 10)
 {
-  library(data.table)
   motif.seqs <- readr::read_csv(
     seqs.path, skip = 1, progress = FALSE,
     col_names = c('length', 'ID'),
@@ -73,15 +72,12 @@ load.motif.scan <- memoise::memoise(function(
         'numeric',
         'integer',
         'numeric'))
-  message('Mutating')
   motif.scan[, motif := factor(rify(motif))]
   motif.scan[, chr := factor(motif.seqs$ID[seq + 1], levels = chr.levels)]
   motif.scan[, logBF := Z.to.log.BF(Z, prior.log.odds, maximum = maximum.BF)]
   motif.scan[, neg.log.p := -log10(p.value)]
-  message('Sorting')
   setkey(motif.scan, chr, position)
   motif.names <- levels(motif.scan$motif)
-  message('Creating GRanges')
   scans <- lapply(
     motif.names,
     function(m) with(
