@@ -5,7 +5,8 @@ dnase.features.dir <- function() file.path(saturn.data(), 'Features', 'DNase')
 
 #' The file for the TF-cell DNase features
 #'
-dnase.feature.file <- function(cell) file.path(dnase.features.dir(), stringr::str_c('dnase-summary-', cell, '.rds'))
+dnase.feature.file <- function(cell) file.path(
+  dnase.features.dir(), stringr::str_c('dnase-summary-', cell, '.rds'))
 
 
 #' Load the DNase features for the cell
@@ -79,3 +80,20 @@ summarise.dnase <- function(cell, type='conservative', aggregation.fn=max) {
   # Aggregate
   agg.by.region(dnase, ranges.test(), 'pValue', aggregation.fn)
 }
+
+
+#' DNase footprint file
+#'
+wellington.footprint.filename <- function(cell, type = 'relaxed') file.path(
+    saturn.data(), 'DNASE', 'bams', 'footprints', cell, type,
+    stringr::str_c('DNASE.', cell, '.merged.bam.DNASE.', cell,
+                   '.relaxed.bed.WellingtonFootprints.FDR.0.01.bed'))
+
+
+#' Load Wellington DGF predictions
+#'
+load.wellington <- memoise::memoise(function(cell) {
+  dgf.file <- wellington.footprint.filename(cell)
+  message('Loading Wellington DGF predictions: ', dgf.file)
+  rtracklayer::import(dgf.file)
+})

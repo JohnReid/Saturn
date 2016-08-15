@@ -13,5 +13,5 @@ for TF in \
     CTCF    GABPA  NANOG  TCF12
 do
     echo $TF
-    sbatch scan-cache $SATURNDIR/ChIPseq/seqs/DREME-$TF/genome-scan
+    sbatch scan-cache $SATURNDIR/Data/ChIPseq/seqs/DREME-$TF/genome-scan
 done

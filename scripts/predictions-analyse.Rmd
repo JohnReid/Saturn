@@ -20,6 +20,7 @@ rmarkdown::render('predictions-analyse.Rmd')
 library(Saturn)
 library(ggplot2)
 library(ggthemes)
+library(ggbio)
 if (exists('params', inherits = FALSE)) {
     tf <- factor(params$tf, levels = tf.levels)
     cell.valid <- factor(params$cell.valid, levels = cell.levels)
@@ -36,13 +37,18 @@ if (exists('params', inherits = FALSE)) {
 
 Load motif scans.
 ```{r loadMotifScans}
-# motif.dir <- '../Data/motifs'
-motif.dir <- '../Data/ChIPseq/seqs/DREME-NANOG/genome-scan'
-system.time(motif.scan <- load.motif.dir(motif.dir))
-object.size(motif.scan)
-motif.scan[['CTCF_full']]
-# results.path <- file.path(motif.dir, 'steme-pwm-scan.out')
-# seqs.path <- file.path(motif.dir, 'steme-pwm-scan.seqs')
+motif.tags <- 'Known'
+motif.dirs <- lapply(motif.tags, motif.dir)
+motif.scans <- lapply(motif.dirs, load.motif.dir)
+names(motif.scans) <- motif.tags
+```
+
+
+# Digital genomic footprinting
+
+Load DGF predictions.
+```{r loadDGF}
+dgf <- load.wellington(cell.valid)
 ```
 
 
@@ -118,22 +124,44 @@ ggplot(preds.df %>% sample_n(10000) , aes(x = chip.qvalue, y = pred, color = log
 ```
 
 
-# A false negative
+# True positives
 
-```{r falseNeg}
-library(ggbio)
-false.neg <-
+```{r truePos}
+set.seed(3)
+true.pos <-
     preds.df %>%
-    filter(pred < .25, 'B' == bound) %>%
-    sample_n(1)
-false.neg
-false.neg.ranges <- regions.to.ranges(false.neg)
-dnase.wiggle <- rtracklayer::import(dnase.signal.file(cell.valid), selection = false.neg.ranges)
-autoplot(dnase.wiggle, geom = "step", aes(y = score)) + theme_few()
+    filter(pred < .75, 'B' == bound) %>%
+    sample_n(6)
+for (i in 1:nrow(true.pos)) {
+    plot.ranges(regions.to.ranges(true.pos[i,]), cell.valid, motif.scans)
+}
 ```
 
 
-# A false positive
+# False negatives
+
+```{r falseNeg}
+false.neg <-
+    preds.df %>%
+    filter(pred < .25, 'B' == bound) %>%
+    sample_n(6)
+for (i in 1:nrow(false.neg)) {
+    plot.ranges(regions.to.ranges(false.neg[i,]), cell.valid, motif.scans)
+}
+```
+
+
+# False positives
+
+```{r falsePos}
+false.pos <-
+    preds.df %>%
+    filter(pred > .75, 'U' == bound) %>%
+    sample_n(6)
+for (i in 1:nrow(false.pos)) {
+    plot.ranges(regions.to.ranges(false.pos[i,]), cell.valid, motif.scans)
+}
+```
 
 
 # Session information
@@ -143,5 +171,3 @@ autoplot(dnase.wiggle, geom = "step", aes(y = score)) + theme_few()
 devtools::session_info()
 largest.objects()
 ```
-
-
