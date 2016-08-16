@@ -271,9 +271,9 @@ if (cell.valid %in% names(chip)) {
   out$bound <- as.factor(chip.valid[valid.keep])
 }
 message('Writing predictions to: ', predictions.path)
-fwrite(
+data.table::fwrite(
   out %>% arrange(chrom, start),
-  predictions.path, '.fixed',
+  predictions.path,
   col.names = FALSE,
   sep = '\t')
 
