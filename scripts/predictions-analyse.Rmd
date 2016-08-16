@@ -133,7 +133,7 @@ true.pos <-
     filter(pred < .75, 'B' == bound) %>%
     sample_n(6)
 for (i in 1:nrow(true.pos)) {
-    plot.ranges(regions.to.ranges(true.pos[i,]), cell.valid, motif.scans)
+    print(plot.ranges(regions.to.ranges(true.pos[i,]), cell.valid, motif.scans))
 }
 ```
 
@@ -146,7 +146,7 @@ false.neg <-
     filter(pred < .25, 'B' == bound) %>%
     sample_n(6)
 for (i in 1:nrow(false.neg)) {
-    plot.ranges(regions.to.ranges(false.neg[i,]), cell.valid, motif.scans)
+    print(plot.ranges(regions.to.ranges(false.neg[i,]), cell.valid, motif.scans))
 }
 ```
 
@@ -159,7 +159,7 @@ false.pos <-
     filter(pred > .75, 'U' == bound) %>%
     sample_n(6)
 for (i in 1:nrow(false.pos)) {
-    plot.ranges(regions.to.ranges(false.pos[i,]), cell.valid, motif.scans)
+    print(plot.ranges(regions.to.ranges(false.pos[i,]), cell.valid, motif.scans))
 }
 ```
 
