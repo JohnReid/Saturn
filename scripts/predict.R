@@ -88,9 +88,12 @@ if (! length(cell.train)) stop('We have no training data for this cell')
 #
 # Fix training and validation chromosomes
 #
-if (valid.split %in% c('ladder', 'submit')) {
+if ('submit' == valid.split) {
   chrs.train <- factor(stringr::str_c('chr', c(2:7, 9:20, 22)), levels = chr.levels)
   chrs.valid <- factor(chr.levels, levels = chr.levels)
+} else if ('ladder' == valid.split) {
+  chrs.train <- factor(stringr::str_c('chr', c(2:7, 9:20, 22)), levels = chr.levels)
+  chrs.valid <- factor(stringr::str_c('chr', c(1, 8, 21)), levels = chr.levels)
 } else if ('train' == valid.split) {
   chrs.train <- factor(stringr::str_c('chr', c(3:6, 9:19, 22)), levels = chr.levels)
   chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
