@@ -1,0 +1,5 @@
+#!/bin/bash -e
+#
+# Grep those predictions in ladder regions.
+#
+grep -P '^chr(1|8|21)\t'

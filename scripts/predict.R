@@ -268,7 +268,11 @@ if (cell.valid %in% names(chip)) {
   out$bound <- as.factor(chip.valid[valid.keep])
 }
 message('Writing predictions to: ', predictions.path)
-readr::write_tsv(out %>% arrange(chrom, start), predictions.path, col_names = FALSE)
+fwrite(
+  out %>% arrange(chrom, start),
+  predictions.path, '.fixed',
+  col.names = FALSE,
+  sep = '\t')
 
 
 #
