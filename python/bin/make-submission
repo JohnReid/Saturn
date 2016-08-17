@@ -31,8 +31,8 @@ project = syn.get('syn7122732')
 # Get the object representing the evaluation queue
 #
 print('Getting evaluation queue.')
-# evaluation = syn.getEvaluation(2005090)
-# syn.joinEvaluation(evaluation)
+evaluation = syn.getEvaluation(7071644)
+syn.joinEvaluation(evaluation)
 
 
 for filename in submission_files:
@@ -44,8 +44,7 @@ for filename in submission_files:
     upload_file = syn.store(upload_file)
 
     #
-    # Make the submission
+    # Submit the file to the evaluation queue
     #
     print('Submitting: {}'.format(filename))
-    # submission = syn.submit(evaluation, upload_file, name='Submission', teamName='Saturn')
-
+    submission = syn.submit(evaluation, upload_file, name='Submission', teamName='Saturn')
