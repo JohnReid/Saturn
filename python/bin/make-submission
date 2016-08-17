@@ -32,7 +32,6 @@ project = syn.get('syn7122732')
 #
 print('Getting evaluation queue.')
 evaluation = syn.getEvaluation(7071644)
-syn.joinEvaluation(evaluation)
 
 
 for filename in submission_files:
