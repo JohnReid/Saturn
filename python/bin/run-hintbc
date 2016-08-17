@@ -59,6 +59,11 @@ then
     exit
 fi
 mkdir -p $OUTPUTDIR
+
+#
+# Set up configuration
+#
+echo "Writing configuration: $INPUTCONFIG"
 if [ ! -s $INPUTCONFIG ]
 then
     (
@@ -71,4 +76,5 @@ fi
 #
 # Run HINT-BC
 #
+echo "Running HINT-BC"
 rgt-hint --default-bias-correction --output-location $OUTPUTDIR $INPUTCONFIG
