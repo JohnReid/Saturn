@@ -221,6 +221,7 @@ message('# validation regions : ', nrow(df.valid))
 #
 message('Converting DataFrames to sparse matrices')
 df.train.nz <- df.train[0 != df.train$dnase,]
+rm(df.train)  # No longer needed
 mat.train <- as(subset(df.train.nz, select = -c(bound)), "Matrix")
 mat.valid <- as(subset(df.valid   , select = -c(bound)), "Matrix")
 rm(df.valid)  # No longer needed
@@ -229,7 +230,7 @@ message('Validation matrix size : ', object.size(mat.valid))
 # Fit a logistic regression
 message('Fitting model')
 response <- as.factor(drop.ambiguous.level(df.train.nz$bound))
-rm(df.train)  # No longer needed
+rm(df.train.nz)  # No longer needed
 system.time(cvfit <- glmnet::cv.glmnet(mat.train, response, family = 'binomial'))
 rm(mat.train)  # No longer needed
 summary(cvfit)
