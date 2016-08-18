@@ -4,12 +4,12 @@
 # predict binding in the VALIDATIONCELL type.
 #
 "Usage:
-predict.R [-t] [--motifs=TAG]... TF VALIDATIONCELL
+predict.R [-t] [--sample=PROPR] [--use-zero-dnase] [--motifs=TAG]... TF VALIDATIONCELL
 
 Options:
   -m --motifs=TAG ...    Use motif features from TAG motifs [default='Known']
-  -t --test              Make predictions on all test regions rather
-                         than just the validation chromosomes [default: FALSE]" -> doc
+  --use-zero-dnase       Fit regions with zero DNase levels [default='False']
+  -s --sample=PROP       Down-sample training regions to PROP [default=1]" -> doc
 
 
 #
@@ -29,6 +29,7 @@ library(Saturn)
 #
 # .args <- "--motif=Known ARID3A K562"
 # .args <- "--motif=Known GATA3 A549"
+# .args <- "--motif=Known --motif=DREME-GABPA -s .1 GABPA SK-N-SH"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
@@ -38,6 +39,8 @@ if (is.na(tf)) stop('Unknown TF specified.')
 cell.valid <- factor(opts$VALIDATIONCELL, levels = cell.levels)
 if (is.na(cell.valid)) stop('Unknown validation cell specified.')
 motifs.tags <- opts$motifs
+sample.prop <- as.numeric(opts$sample)
+use.zero.dnase <- as.logical(opts[['use-zero-dnase']])
 
 
 #
@@ -113,12 +116,14 @@ chip <- load.chip.features(tf)
 chip.cols <- colnames(chip)
 chip <- do.call(S4Vectors::DataFrame, lapply(chip, train.factor.Rle.to.test))
 colnames(chip) <- chip.cols
+message('ChIP data size: ', object.size(chip))
 
 
 #
 # Load DNase features
 #
 dnase <- load.dnase.features(cell.all)
+message('DNASE data size: ', object.size(dnase))
 
 
 #
@@ -145,19 +150,8 @@ motif.features <- lapply(motifs.tags, load.motif.features)
 
 
 #
-# Determine which regions DNase levels are non-zero
-# Any regions with zero DNase-levels we will assume are
-# non-binding.
-#
-non.zero <- lapply(dnase, function(x) x != 0)
-names(non.zero) <- cell.all
-num.non.zero <- Reduce('+', lapply(non.zero, sum), 0)
-message('# non-zero regions across all cell types: ', num.non.zero)
-
-
-#
-# Create data from the features and response, ignoring those regions without any DNase hits
-# and those that are not in our training or validation sets.
+# Create data from the features and response, ignoring those regions
+# that are not in our training or validation sets.
 #
 train.idxs <- regions.test$chrom %in% chrs.train
 valid.idxs <- regions.test$chrom %in% chrs.valid
@@ -171,22 +165,28 @@ regions.for.cell <- function(cell) {
       valid.idxs
   }
 }
-#' Wrangle the data for the given cell
+#' Wrangle the data for the given cell, remove ambiguous binding if we have
+#' binding data
 #'
-cell.data <- function(cell) {
+cell.data <- function(cell, remove.ambiguous = TRUE) {
   message('Wrangling data for: ', cell)
-  # Work out which regions to keep (ignore ambiguously bound regions)
+  # Get the binding status
+  cell.bound <- chip[[as.character(cell)]]
+  # Work out which regions to keep
   keep <- regions.for.cell(cell)
+  if (is.null(cell.bound)) {
+    # If we don't have binding information, use NAs
+    cell.bound <- Rle(factor(NA, binding.levels), length(keep))
+  } else if (remove.ambiguous) {
+    # Work out which regions to keep (ignore ambiguously bound regions)
+    keep <- keep & ('A' != cell.bound)
+  }
+  # Subset bound regions
+  cell.bound <- cell.bound[keep]
   # Get all the motif features
   motif.feats <- do.call(cbind, lapply(motif.features, function(feat) feat(keep)))
   # Get the DNase levels
   cell.dnase <- Rle(dnase[[as.character(cell)]][keep])
-  # Get the binding status
-  cell.bound <- chip[[as.character(cell)]][keep]
-  if (is.null(cell.bound)) {
-    # If we don't have binding information, use NAs
-    cell.bound <- Rle(factor(NA, binding.levels), sum(keep))
-  }
   # Return S4Vectors::DataFrame
   cbind(
     S4Vectors::DataFrame(
@@ -197,40 +197,51 @@ cell.data <- function(cell) {
       bound = cell.bound),
     motif.feats)
 }
-#' Remove ambiguously bound regions from DataFrames
-#'
-remove.ambiguously.bound <- function(df) df['A' != df$bound,]
-#' Convert bound factor to integer
-#'
-bound.factor.to.numeric <- function(bound) {
-  is.unbound <- 'U' == bound
-  Rle(ifelse(runValue(is.unbound), 0, 1), runLength(is.unbound))
-}
 # Build the training data
-df.train <- remove.ambiguously.bound(Reduce(rbind, lapply(cell.train, cell.data)))
-# Build the validation data
-df.valid <- Reduce(rbind, lapply(cell.valid, cell.data))
+message('Creating training data')
+df.train <- do.call(rbind, lapply(cell.train, cell.data))
 message('Training data size   : ', object.size(df.train))
-message('Validation data size : ', object.size(df.valid))
 message('# training regions   : ', nrow(df.train))
-message('# validation regions : ', nrow(df.valid))
 
 
 #
-# Fit
+# Remove regions with no DNase if requested
 #
-message('Converting DataFrames to sparse matrices')
-df.train.nz <- df.train[0 != df.train$dnase,]
+if (! use.zero.dnase) {
+  message('Removing regions without DNase levels')
+  df.train <- df.train[0 != df.train$dnase,]
+  message('# training regions: ', nrow(df.train))
+}
+
+
+#
+# Create training matrix
+#
+message('Creating training matrix and response')
+mat.train <- as(subset(df.train, select = -c(bound)), "Matrix")
+response <- factor(as.factor(df.train$bound), levels = c('U', 'B'))
 rm(df.train)  # No longer needed
-mat.train <- as(subset(df.train.nz, select = -c(bound)), "Matrix")
-mat.valid <- as(subset(df.valid   , select = -c(bound)), "Matrix")
-rm(df.valid)  # No longer needed
-message('Training matrix size   : ', object.size(mat.train))
-message('Validation matrix size : ', object.size(mat.valid))
+
+
+#
+# Down sample regions
+#
+if (sample.prop < 1) {
+  message('Sampling training regions, proportion: ', sample.prop)
+  .sample <- sample.int(nrow(mat.train), size = as.integer(sample.prop * nrow(mat.train)))
+  mat.train <- mat.train[.sample,]
+  response <- response[.sample]
+  rm(.sample)
+  message('# training regions: ', nrow(mat.train))
+}
+
+
+#
 # Fit a logistic regression
+#
+message('Training matrix size: ', object.size(mat.train))
+message('# features: ', ncol(mat.train))
 message('Fitting model')
-response <- as.factor(drop.ambiguous.level(df.train.nz$bound))
-rm(df.train.nz)  # No longer needed
 system.time(cvfit <- glmnet::cv.glmnet(mat.train, response, family = 'binomial'))
 rm(mat.train)  # No longer needed
 summary(cvfit)
@@ -245,12 +256,23 @@ saveRDS(cvfit, fit.path)
 
 
 #
+# Create validation matrix
+#
+message('Creating validation data')
+df.valid <- cell.data(cell.valid, remove.ambiguous = FALSE)
+message('Validation data size : ', object.size(df.valid))
+message('# validation regions : ', nrow(df.valid))
+mat.valid <- as(subset(df.valid   , select = -c(bound)), "Matrix")
+rm(df.valid)  # No longer needed
+message('Validation matrix size : ', object.size(mat.valid))
+
+
+#
 # Make predictions on validation data
 #
 lambda.predict <- "lambda.min"
 system.time(predictions <- predict(cvfit, mat.valid, s = lambda.predict)[,1])
 rm(mat.valid)  # No longer needed
-# ggplot2::qplot(predictions) + ggplot2::scale_y_log10()
 
 
 #
@@ -266,6 +288,8 @@ out <-
     start = start,
     end   = start + 200,
     pred  = logit.inv(predictions))
+rm(predictions)  # No longer needed
+rm(start)  # No longer needed
 # Add true binding values to data frame if we know them
 if (cell.valid %in% names(chip)) {
   chip.valid <- chip[[as.character(cell.valid)]]
@@ -277,6 +301,7 @@ data.table::fwrite(
   predictions.path,
   col.names = FALSE,
   sep = '\t')
+rm(out)
 
 
 #
