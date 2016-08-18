@@ -13,7 +13,7 @@ saveRDS(
 #
 # Convert the DREME motifs
 #
-for (tf in tfs$TF) {
+for (tf in tf.levels) {
   dreme.feature.dir <- file.path(features.dir(), 'Motifs', stringr::str_c('DREME-', tf))
   saveRDS(
     load.motif.features(dreme.feature.dir),
