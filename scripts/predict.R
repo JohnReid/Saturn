@@ -142,16 +142,16 @@ regions.for.cell <- function(cell) {
 #
 load.cell.data <- function(
   cell,
-  use.zero.dnase = FALSE,
-  sample.prop = sample.prop,
-  remove.ambiguous = TRUE)
+  .use.zero.dnase = FALSE,
+  .sample.prop = sample.prop,
+  .remove.ambiguous = TRUE)
 {
   #
   # Get the binding status
   response <- chip[[as.character(cell)]]
   # Work out which regions to keep
   keep <- regions.for.cell(cell)
-  if (! is.null(response) & remove.ambiguous) {
+  if (! is.null(response) & .remove.ambiguous) {
     # Work out which regions to keep (ignore ambiguously bound regions)
     keep <- keep & ('A' != response)
   }
@@ -164,7 +164,7 @@ load.cell.data <- function(
       lapply(feat.names, function(feat.name) load.feature(feat.name, tf, cell)[as.vector(keep), , drop = FALSE]))
   #
   # Remove those with zero DNase levels if we don't want them
-  if (! use.zero.dnase) {
+  if (! .use.zero.dnase) {
     dnase.non.zeros <- 0 != mat[,'DNase']
     message(cell, ': Removing regions with no DNase. ',
             'Reducing regions from ', length(dnase.non.zeros),
@@ -174,8 +174,8 @@ load.cell.data <- function(
   }
   #
   # Subsample the regions if requested
-  if (sample.prop < 1) {
-    .sample <- sample.int(nrow(mat), size = as.integer(sample.prop * nrow(mat)))
+  if (.sample.prop < 1) {
+    .sample <- sample.int(nrow(mat), size = as.integer(.sample.prop * nrow(mat)))
     mat <- mat[.sample,]
     response <- response[.sample]
   }
@@ -214,7 +214,7 @@ saveRDS(cvfit, fit.path)
 # Create validation matrix
 #
 message('Creating validation data')
-valid.feat <- load.cell.data(cell.valid, use.zero.dnase = TRUE, sample.prop = 1, remove.ambiguous = FALSE)$features
+valid.feat <- load.cell.data(cell.valid, .use.zero.dnase = TRUE, .sample.prop = 1, .remove.ambiguous = FALSE)$features
 message('Validation data size : ', object.size(valid.feat))
 
 
