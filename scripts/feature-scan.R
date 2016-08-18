@@ -21,6 +21,7 @@ library(Saturn)
 #
 # Parse options
 #
+# .args <- "/home/john/Dev/DREAM-ENCODE/Data/Motifs/Known/ TestScan"
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
@@ -29,85 +30,38 @@ scan.tag <- opts[['SCANTAG']]
 
 
 #
-# Set up file paths
+# Set up
 #
-scan.out   <- file.path(scan.dir, 'steme-pwm-scan.out')
-scan.seqs  <- file.path(scan.dir, 'steme-pwm-scan.seqs')
-features.dir <- file.path(saturn.data(), 'Features', 'Motifs', scan.tag)
-if (! dir.exists(scan.dir)) {
-  message('Scan directory does not exist: ', scan.dir)
-  quit(save = "no")
-}
-stopifnot(file.exists(scan.out))
-stopifnot(file.exists(scan.seqs))
-if (dir.exists(features.dir)) {
-  message('Feature directory already exists: ', features.dir)
-  quit(save = "no")
+features.file.name <- feature.file.name(scan.tag)
+stopifnot(file.exists(scan.dir))
+stopifnot(file.exists(dirname(features.file.name)))
+if (file.exists(features.file.name)) {
+  message('Features already exist, stopping: ', features.file.name)
+  quit(save = 'no')
 }
 
 
 #
-# Read hits
+# Load motifs
 #
-# Read sequence names
-message('Read sequence names: ', scan.seqs)
-seqs <-
-  data.table::fread(scan.seqs, col.names = c('length', 'chrom'), header = TRUE) %>%
-  mutate(chrom = factor(chrom, chr.levels))
-sapply(seqs, class)
-# Read hits
-message('Read scan hits: ', scan.out)
-hits <-
-  data.table::fread(
-    scan.out,
-    header = TRUE,
-    col.names = c('motif', 'w.mer', 'seq', 'start', 'strand', 'Z', 'score', 'p.value'),
-    colClasses = c("character", "character", "integer", "integer",
-                   "character", "numeric", "integer", "numeric")) %>%
-  mutate(
-    motif = factor(motif),
-    chrom = seqs$chrom[seq + 1],  # Use 1-based indexing
-    start = start + 1,            # Change to 1-based indexing
-    strand = factor(strand)) %>%
-  select(-seq)
-sapply(hits, class)
-object.size(hits)
+.scan <- load.motif.dir(scan.dir)
 
 
 #
 # Generate feature for each motif
 #
-message('Generate features for motifs')
-motifs <- levels(hits$motif)
-features <- lapply(motifs,
-  function(m) {
-    message('Motif: ', m)
-    # Separate into motifs
-    motif.hits <- hits %>% filter(motif == m) %>% select(-motif)
-    # Convert to GRanges
-    hits.gr <- with(motif.hits,
-      GRanges(
-        seqnames = chrom,
-        ranges = IRanges(start = start, width = stringr::str_length(w.mer)),
-        strand = strand,
-        seqinfo = seqinfo(hg19)))
-    # Find overlaps with test ranges
-    overlaps <- as.data.frame(findOverlaps(ranges.test(), hits.gr, ignore.strand = TRUE))
-    overlaps$value <- Z.to.log.BF(motif.hits$Z[overlaps$subjectHits])
-    with(
-      aggregate(overlaps %>% select(-subjectHits), list(overlaps$queryHits), max),
-      Rle.from.sparse(length(ranges.test()), queryHits, value))
-  })
-names(features) <- motifs
+calc.feature <- function(hits.gr) {
+  overlaps <- as.data.frame(findOverlaps(ranges.test(), hits.gr, ignore.strand = TRUE))
+  overlaps$value <- mcols(hits.gr[overlaps$subjectHits])$logBF
+  with(
+    aggregate(overlaps %>% select(-subjectHits), list(overlaps$queryHits), max),
+    Rle.from.sparse(length(ranges.test()), queryHits, value))
+}
+features <- lapply(.scan, calc.feature)
+
 
 #
-# Save features and motif names
+# Save features
 #
-message('Saving features: ', features.dir)
-dir.create(features.dir)
-feature.file <- function(m) stringr::str_c('motif-', m, '.rds')
-feature.path <- function(m) file.path(features.dir, feature.file(m))
-motifs.meta <- data.frame(motif = motifs, motif.r = rify(motifs)) %>%
-  mutate(feature.file = feature.file(motif))
-saveRDS(motifs.meta, file.path(features.dir, 'motif-names.rds'))
-lapply(motifs, function(m) saveRDS(features[[m]], feature.path(m)))
+message('Saving features: ', features.file.name)
+saveRDS(features, features.file.name)
