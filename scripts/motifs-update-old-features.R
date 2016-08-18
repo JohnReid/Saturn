@@ -17,7 +17,6 @@ if (! file.exists(new.feature.file)) {
 # Convert the DREME motifs
 #
 for (tf in tf.levels) {
-  if ('E2F1' == tf) next
   dreme.feature.dir <- file.path(features.dir(), 'Motifs', stringr::str_c('DREME-', tf))
   new.feature.file <- feature.tf.file.name('DREME', tf)
   if (! file.exists(new.feature.file)) {

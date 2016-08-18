@@ -46,4 +46,4 @@ for filename in submission_files:
     # Submit the file to the evaluation queue
     #
     print('Submitting: {}'.format(filename))
-    submission = syn.submit(evaluation, upload_file, name='Submission', teamName='Saturn')
+    submission = syn.submit(evaluation, upload_file, name='Submission', team='Saturn')
