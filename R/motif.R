@@ -115,3 +115,17 @@ summarise.scan.hits <- function(gr, scan.hits) {
       logBF     = Rle.from.sparse(length(gr), queryHits, logBF),
       neg.log.p = Rle.from.sparse(length(gr), queryHits, neg.log.p)))
 }
+
+
+#' Load motif features from directory
+#'
+load.motif.features <- function(motif.feature.dir) {
+  message('Loading motifs from: ', motif.feature.dir)
+  motifs.meta <- readRDS(file.path(motif.feature.dir, 'motif-names.rds'))
+  message('Have information on ', nrow(motifs.meta), ' motifs')
+  motif.features <- lapply(
+    1:nrow(motifs.meta),
+    function(i) readRDS(file.path(motif.feature.dir, basename(motifs.meta$feature.file[i]))))
+  names(motif.features) <- motifs.meta$motif
+  do.call(S4Vectors::DataFrame, motif.features)
+}
