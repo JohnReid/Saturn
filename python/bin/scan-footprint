@@ -58,7 +58,7 @@ scantag = 'DREME'
 # Load R data frame
 #
 objs = r('load("{}")'.format(tfsdata))
-tfs = pandas2ri.ri2py(r[objs[0]])
+tfs = r[objs[0]]
 
 
 #
@@ -83,4 +83,4 @@ for tf in scantfs:
     #
     # Choose each cell type as the validation cell type in turn
     print(args)
-    # subprocess.check_call(args)
+    subprocess.check_call(args)
