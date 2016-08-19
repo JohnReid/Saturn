@@ -31,7 +31,7 @@ load.motif.dir <- function(
       prior.log.odds,
       maximum.BF)
     message('Saving motif scan to cache: ', scan.cache)
-    saveRDS(motif.scan, scan.cache)
+    saveRDS(lapply(motif.scan, GNCList), scan.cache)
     motif.scan
   }
 }
