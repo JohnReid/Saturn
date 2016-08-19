@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+#
+# Footprint the DREME scan in all the cell types that are relevant for the TF(s)
+#
+#!
+#! sbatch directives begin here ###############################
+#!
+#SBATCH -p mrc-bsu-sand                 # Partition
+#SBATCH -J SCANFOOT                     # Name of the job
+#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
+#SBATCH --nodes=1                       # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --mem=30500                     # How many MB each node is allocated
+#SBATCH --time=04:00:00                 # How much wallclock time will be required?
+#SBATCH -o scan-foot-%j.out             # stdout
+#SBATCH -e scan-foot-%j.out             # stderr
+#SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
+##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
+                                        # interrupted by node failure or system downtime):
+
+
+#
+# Import packages
+#
+from docopt import docopt
+import sys
+import subprocess
+import warnings
+from rpy2.robjects import r
+from rpy2.robjects import pandas2ri
+pandas2ri.activate()
+
+
+#
+# Parse options
+#
+doc = """Usage: scan-footprint TF..."""
+opts = docopt(doc)
+scantfs = opts['TF']
+print('TFS: {}'.format(', '.join(scantfs)))
+
+
+#
+# Set up paths
+#
+tfsdata = '../data/tfs.rda'
+script = '../scripts/feature-scan.R'
+
+
+#
+# Set up argments for subprocesses
+#
+cmdargs = [script]
+scantag = 'DREME'
+
+
+#
+# Load R data frame
+#
+objs = r('load("{}")'.format(tfsdata))
+tfs = pandas2ri.ri2py(r[objs[0]])
+
+
+#
+# For each TF
+#
+for tf in scantfs:
+    scandir = '../Data/Motifs/DREME-{}'.format(tf)
+    #
+    # Get the rows for this TF
+    group = tfs[tfs['TF'] == tf]
+    #
+    # We need one cell type to run the prediction
+    if group.shape[0] < 1:
+        warnings.warn('No cell types for TF: {}'.format(tf))
+        continue
+    #
+    # Build the arguments
+    cellargs = list(map(lambda cell: '--cell={}'.format(cell), group.cell))
+    #
+    #
+    args = cmdargs + cellargs + ['--wellington', scandir, scantag]
+    #
+    # Choose each cell type as the validation cell type in turn
+    print(args)
+    # subprocess.check_call(args)
