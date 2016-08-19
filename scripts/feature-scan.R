@@ -21,7 +21,7 @@ library(Saturn)
 #
 # Parse options
 #
-.args <- "--cell=A549 --wellington /home/john/Dev/DREAM-ENCODE/Data/Motifs/Known/ TestScan"
+# .args <- "--cell=A549 --wellington /home/john/Dev/DREAM-ENCODE/Data/Motifs/Known/ KnownMotifs"
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
@@ -36,20 +36,15 @@ wellington <- opts$wellington
 # Set up
 #
 stopifnot(file.exists(scan.dir))
-stopifnot(file.exists(file.path(features.dir, scan.tag)))
-if (file.exists(features.file.name)) {
-  message('Features already exist, stopping: ', features.file.name)
-  quit(save = 'no')
-}
+stopifnot(file.exists(file.path(features.dir(), scan.tag)))
 if (wellington && ! length(cells)) {
-  stop('Wellington: no cells specified.')
+  stop('No cells specified for Wellington footprints.')
 }
 
 
-#
-# Load motifs
-#
-.scan <- load.motif.dir(scan.dir)
+#' Cached function to load motifs
+#'
+get.scan <- memoise::memoise(function() load.motif.dir(scan.dir))
 
 
 #' Generate feature for each motif
@@ -66,16 +61,16 @@ calc.feature <- function(hits.gr) {
 #' Subset ranges by footprints
 #'
 subsetByFootprints <- function(gr, cell) {
-  message('Subsetting by footprints: ', cell)
   footprints <- load.wellington(cell)
   subsetByOverlaps(gr, footprints)
 }
 
 
-#' Save features
+#' Save features as DataFrame
 #'
 save.features <- function(features, features.file.name) {
   message('Saving features: ', features.file.name)
+  dir.create(dirname(features.file.name), showWarnings = FALSE)
   saveRDS(do.call(S4Vectors::DataFrame, features), features.file.name)
 }
 
@@ -89,20 +84,28 @@ if (wellington) {
     #
     # If a TF is specified name the feature file with it
     #
+    well.tag <- stringr::str_c(scan.tag, 'Well')
     if (is.null(tf)) {
-      features.file.name <- feature.cell.file.name(scan.tag, cell)
+      features.file.name <- feature.cell.file.name(well.tag, cell)
     } else {
-      features.file.name <- feature.tf.cell.file.name(scan.tag, tf, cell)
+      features.file.name <- feature.tf.cell.file.name(well.tag, tf, cell)
     }
-    #
-    # Calculate and save features
-    features <-
-      lapply(
-        lapply(.scan, functional::Curry(subsetByFootprints, cell = cell)),
-        calc.feature)
-    save.features(features, features.file.name)
+    if (file.exists(features.file.name)) {
+      message('Features already exist, not recreating: ', features.file.name)
+    } else {
+      #
+      # Calculate and save features (subsetted by footprints)
+      message('Subsetting by footprints: ', cell)
+      features <-
+        lapply(
+          lapply(get.scan(), functional::Curry(subsetByFootprints, cell = cell)),
+          calc.feature)
+      names(features) <- stringr::str_c(names(features), '.Well')
+      save.features(features, features.file.name)
+    }
   }
 }
+
 
 #
 # If a TF is specified name the feature file with it
@@ -112,7 +115,12 @@ if (is.null(tf)) {
 } else {
   features.file.name <- feature.tf.file.name(scan.tag, tf)
 }
-#
-# Calculate and save features
-features <- lapply(.scan, calc.feature)
-save.features(features, features.file.name)
+if (file.exists(features.file.name)) {
+  message('Features already exist, not recreating: ', features.file.name)
+} else {
+  #
+  # Calculate and save features
+  message('Calculating features without footprints: ')
+  features <- lapply(get.scan(), calc.feature)
+  save.features(features, features.file.name)
+}
