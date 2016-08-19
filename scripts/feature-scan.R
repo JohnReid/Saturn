@@ -129,3 +129,4 @@ if (file.exists(features.file.name)) {
   features <- lapply(get.scan(), calc.feature)
   save.features(features, features.file.name)
 }
+message('Done')
