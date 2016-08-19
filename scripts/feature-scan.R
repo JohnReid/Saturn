@@ -125,7 +125,7 @@ if (file.exists(features.file.name)) {
 } else {
   #
   # Calculate and save features
-  message('Calculating features without footprints: ')
+  message('Calculating features without footprints')
   features <- lapply(get.scan(), calc.feature)
   save.features(features, features.file.name)
 }
