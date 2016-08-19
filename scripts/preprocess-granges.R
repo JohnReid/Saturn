@@ -27,6 +27,17 @@ print(opts)
 rds.files <- opts[['GR']]
 
 
+#' Preprocess the argument if it is not already a GNCList
+#'
+asGNCList <- function(gr) {
+  if (is(gr, "GNCList")) {
+    gr
+  } else {
+    GNCList(gr)
+  }
+}
+
+
 #
 # Convert the ranges
 #
@@ -34,15 +45,10 @@ for (rds.file in rds.files) {
   message('Loading: ', rds.file)
   gr <- readRDS(rds.file)
   if (is(gr, "list")) {
-    message('A list: ', rds.file)
-    gr.pp <- lapply(gr, GNCList)
+    gr.pp <- lapply(gr, asGNCList)
   } else if (is(gr, "GNCList")) {
-    message('Already a GNCList, skipping: ', rds.file)
-    next
-  } else {
-    message('Converting: ', rds.file)
-    gr.pp <- GNCList(gr)
+    gr.pp <- asGNCList(gr)
   }
   message('Saving: ', rds.file)
-  saveRDS(gr.pp, rds.file, '.tmp')
+  saveRDS(gr.pp, rds.file)
 }
