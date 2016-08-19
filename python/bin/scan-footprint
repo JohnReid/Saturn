@@ -79,7 +79,7 @@ for tf in scantfs:
     cellargs = list(map(lambda cell: '--cell={}'.format(cell), group.cell))
     #
     #
-    args = cmdargs + cellargs + ['--wellington', scandir, scantag]
+    args = cmdargs + cellargs + ['--wellington', '--tf={}'.format(tf), scandir, scantag]
     #
     # Choose each cell type as the validation cell type in turn
     print(args)

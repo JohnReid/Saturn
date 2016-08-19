@@ -22,6 +22,7 @@ library(Saturn)
 # Parse options
 #
 # .args <- "--cell=A549 --wellington /home/john/Dev/DREAM-ENCODE/Data/Motifs/Known/ KnownMotifs"
+# .args <- "--cell=H1-hESC --tf=TEAD4 --wellington ..//Data/Motifs/DREME-TEAD4/genome-scan DREME"
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
@@ -51,10 +52,14 @@ get.scan <- memoise::memoise(function() load.motif.dir(scan.dir))
 #'
 calc.feature <- function(hits.gr) {
   overlaps <- as.data.frame(findOverlaps(ranges.test(), hits.gr, ignore.strand = TRUE))
-  overlaps$value <- mcols(hits.gr[overlaps$subjectHits])$logBF
-  with(
-    aggregate(overlaps %>% select(-subjectHits), list(overlaps$queryHits), max),
-    Rle.from.sparse(length(ranges.test()), queryHits, value))
+  if (! nrow(overlaps)) {
+    Rle(0, length(ranges.test()))
+  } else {
+    overlaps$value <- mcols(hits.gr[overlaps$subjectHits])$logBF
+    with(
+      aggregate(overlaps %>% select(-subjectHits), list(overlaps$queryHits), max),
+      Rle.from.sparse(length(ranges.test()), queryHits, value))
+  }
 }
 
 
