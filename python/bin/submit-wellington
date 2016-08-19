@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #
 # Submit a wellington job for each cell
 #
@@ -11,7 +10,7 @@ CELLS="
     HCT116
     HeLa-S3
     HepG2
-    IMR90
+    IMR-90
     induced_pluripotent_stem_cell
     K562
     liver
