@@ -92,8 +92,8 @@ wellington.footprint.filename <- function(cell, type = 'relaxed') file.path(
 
 #' Load Wellington DGF predictions
 #'
-load.wellington <- memoise::memoise(function(cell) {
-  dgf.file <- wellington.footprint.filename(cell)
+load.wellington <- memoise::memoise(function(cell, type = 'relaxed') {
+  dgf.file <- wellington.footprint.filename(cell = cell, type = type)
   message('Loading Wellington DGF predictions: ', dgf.file)
   rtracklayer::import(dgf.file)
 })
