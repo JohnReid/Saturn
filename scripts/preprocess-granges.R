@@ -20,7 +20,7 @@ library(GenomicRanges)
 #
 # Parse options
 #
-.args <- "../Data/Motifs/Known/scan-gr.rds"
+# .args <- "../Data/Motifs/Known/scan-gr.rds"
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
