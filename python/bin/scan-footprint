@@ -65,7 +65,7 @@ tfs = r[objs[0]]
 # For each TF
 #
 for tf in scantfs:
-    scandir = '../Data/Motifs/DREME-{}'.format(tf)
+    scandir = '../Data/Motifs/DREME-{}/genome-scan'.format(tf)
     #
     # Get the rows for this TF
     group = tfs[tfs['TF'] == tf]
