@@ -20,7 +20,8 @@ pandas2ri.activate()
 # Set up paths
 #
 tfsdata = '../data/tfs.rda'
-predictscript = '../python/bin/predict'
+# predictscript = '../python/bin/predict'
+predictscript = '../scripts/predict.R'
 
 
 #
