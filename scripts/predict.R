@@ -19,7 +19,7 @@
 ##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
                                         # interrupted by node failure or system downtime):
 "Usage:
-predict.R [-t] [--sample=PROPR] [--use-zero-dnase] [--features=NAME]... TF VALIDATIONCELL
+predict.R [-t] [--sample=PROP] [--use-zero-dnase] [--features=NAME]... TF VALIDATIONCELL
 
 Options:
   -f --features=NAME ... Use NAME features
