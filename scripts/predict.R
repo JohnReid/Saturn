@@ -3,6 +3,21 @@
 # Simple prediction script. Analyses data from other cell types for a TF to
 # predict binding in the VALIDATIONCELL type.
 #
+#!
+#! sbatch directives begin here ###############################
+#!
+#SBATCH -p mrc-bsu-sand                 # Partition
+#SBATCH -J PREDICT                      # Name of the job
+#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
+#SBATCH --nodes=1                       # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --mem=30720                     # How many MB each node is allocated
+#SBATCH --time=12:00:00                 # How much wallclock time will be required?
+#SBATCH -o predict-%j.out               # stdout
+#SBATCH -e predict-%j.out               # stderr
+#SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
+##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
+                                        # interrupted by node failure or system downtime):
 "Usage:
 predict.R [-t] [--sample=PROP] [--use-zero-dnase] [--features=NAME]... TF VALIDATIONCELL
 
