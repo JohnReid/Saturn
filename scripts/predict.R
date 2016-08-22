@@ -192,7 +192,7 @@ load.cell.data <- function(
   }
   #
   # Subsample the regions if requested
-  if (! is.null(.sample.prop) && .sample.prop < 1) {
+  if (.sample.prop < 1) {
     .sample <- sample.int(nrow(mat), size = as.integer(.sample.prop * nrow(mat)))
     mat <- mat[.sample,]
     response <- response[.sample]
