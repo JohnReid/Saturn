@@ -4,7 +4,7 @@
 # predict binding in the VALIDATIONCELL type.
 #
 "Usage:
-predict.R [-t] [--sample=PROPR] [--use-zero-dnase] [--features=NAME]... TF VALIDATIONCELL
+predict.R [-t] [--sample=PROP] [--use-zero-dnase] [--features=NAME]... TF VALIDATIONCELL
 
 Options:
   -f --features=NAME ... Use NAME features
