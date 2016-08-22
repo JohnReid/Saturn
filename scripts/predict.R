@@ -56,6 +56,9 @@ if (is.na(cell.valid)) stop('Unknown validation cell specified.')
 feat.names <- opts$features
 sample.prop <- as.numeric(opts$sample)
 use.zero.dnase <- as.logical(opts[['use-zero-dnase']])
+if (! 'DNase' %in% feat.names) {
+  message('No DNase feature included in arguments!!!')
+}
 
 
 #
@@ -179,7 +182,7 @@ load.cell.data <- function(
       lapply(feat.names, function(feat.name) load.feature(feat.name, tf, cell)[as.vector(keep), , drop = FALSE]))
   #
   # Remove those with zero DNase levels if we don't want them
-  if (! .use.zero.dnase) {
+  if (! .use.zero.dnase && 'DNase' %in% colnames(mat)) {
     dnase.non.zeros <- 0 != mat[,'DNase']
     message(cell, ': Removing regions with no DNase. ',
             'Reducing regions from ', length(dnase.non.zeros),
@@ -189,7 +192,7 @@ load.cell.data <- function(
   }
   #
   # Subsample the regions if requested
-  if (.sample.prop < 1) {
+  if (! is.null(.sample.prop) && .sample.prop < 1) {
     .sample <- sample.int(nrow(mat), size = as.integer(.sample.prop * nrow(mat)))
     mat <- mat[.sample,]
     response <- response[.sample]
