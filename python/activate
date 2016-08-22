@@ -1,11 +1,19 @@
+#
 # Determine directory
 SELF=$(readlink -f $BASH_SOURCE)
 PROJECTDIR=$(dirname $SELF)
+export SATURNDIR=$(readlink -f $PROJECTDIR/..)
+export SLURMDIR=$SATURNDIR/slurm
 
-# Activate virtualenv
-. $PROJECTDIR/virtualenv/bin/activate
+#
+# Set up correct modules on BSU-HPC
+if [ 'login-mrc-bsu' == $(hostname) ]
+then
+  . /etc/profile.d/modules.sh
+  module load cuda/8.0-RC
+fi
 
+#
 # Update PATH
-PATH=$PROJECTDIR/bin:$PROJECTDIR/scripts:$PATH
-PYTHONPATH=$PROJECTDIR/python:$PYTHONPATH
-# add2virtualenv $PROJECTDIR/python
+PATH=$PROJECTDIR/bin:$PROJECTDIR/scripts:$SATURNDIR/etc/HOMER/bin:$PATH
+PYTHONPATH=$PROJECTDIR:$PYTHONPATH

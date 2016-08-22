@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+#
+# Submit a prediction job for each possible TF/cell combination.
+#
+# Any extra arguments are passed on to the prediction script.
+# %TF% is replaced by the TF name in the arguments.
+#
+
+#
+# Import packages
+#
+import sys
+import subprocess
+from rpy2.robjects import r
+from rpy2.robjects import pandas2ri
+pandas2ri.activate()
+
+
+#
+# Set up paths
+#
+tfsdata = '../data/tfs.rda'
+# predictscript = '../python/bin/predict'
+predictscript = '../scripts/predict.R'
+
+
+#
+# Set up argments for subprocesses
+#
+cmdargs = ['sbatch', predictscript] + sys.argv[1:]
+
+
+#
+# Load R data frame
+#
+objs = r('load("{}")'.format(tfsdata))
+tfs = r[objs[0]]
+
+
+#
+# For each TF
+#
+for tf, group in tfs.groupby('TF'):
+    #
+    # Filter the group according to the arguments
+    if '-l' not in sys.argv and '--ladder' not in sys.argv:
+        group = group['ladder' != group.split]
+    if '-s' not in sys.argv and '--submit' not in sys.argv:
+        group = group['submit' != group.split]
+    #
+    # We need more than one cell type to run the prediction
+    if group.shape[0] < 2:
+        continue
+    #
+    # Define a function to replace %TF% with the TF name
+    def substitutetf(s):
+        return s.replace('%TF%', tf)
+    #
+    # Choose each cell type as the validation cell type in turn
+    for validcell in group.cell:
+        args = list(map(substitutetf, cmdargs + [tf, validcell]))
+        print(args)
+        subprocess.check_call(args)

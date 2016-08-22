@@ -1,0 +1,98 @@
+#!/usr/bin/env python2
+
+#
+# Associate motifs with transcription factors
+#
+# Takes as input the output of grep for the 'MOTIF M5293_1.02 ATF7' line in
+# a MEME motif file and looks for the transcription factors name in it.
+#
+
+import sys
+import re
+from collections import defaultdict
+
+tfs = [
+    'ARID3A',
+    'ATF2',
+    'ATF3',
+    'ATF7',
+    'CEBPB',
+    'CREB1',
+    'CTCF',
+    'E2F1',
+    'E2F6',
+    'EGR1',
+    'EP300',
+    'FOXA1',
+    'FOXA2',
+    'GABPA',
+    'GATA3',
+    'HNF4A',
+    'JUND',
+    'MAFK',
+    'MAX',
+    'MYC',
+    'NANOG',
+    'REST',
+    'RFX5',
+    'SPI1',
+    'SRF',
+    'STAT3',
+    'TAF1',
+    'TCF12',
+    'TCF7L2',
+    'TEAD4',
+    'YY1',
+    'ZNF143',
+]
+
+#
+# Make a list of regexes for each TF
+#
+regexes = dict((tf, [re.compile(tf, re.IGNORECASE)]) for tf in tfs)
+# Add one for TAF1
+regexes['TAF1'].append(re.compile('TBP', re.IGNORECASE))
+
+
+#
+# Initialise a map from TFs to motifs and vice versa
+#
+tf_motifs = defaultdict(list)
+motif_tfs = defaultdict(list)
+
+#
+# Iterate through the motifs
+#
+fin = open(sys.argv[1], 'r')
+while True:
+    line = fin.readline()
+    if not line:
+        break
+    if line.startswith('MOTIF'):
+        motif = line.strip().split(' ')[1]
+        for tf in tfs:
+            for reg in regexes[tf]:
+                match = reg.search(line)
+                if match:
+                    motif_tfs[motif].append(tf)
+                    tf_motifs[tf].append(motif)
+
+#
+# Check each TF got a motif
+#
+for tf, motifs in tf_motifs.iteritems():
+    if not motifs:
+        print(tf)
+
+#
+# Check each motif got a TF
+#
+for motif, tfs in motif_tfs.iteritems():
+    if not tfs:
+        print(motif)
+
+fout = open(sys.argv[2], 'w')
+fout.write('TF,motif\n')
+for tf, motifs in tf_motifs.iteritems():
+    for motif in motifs:
+        fout.write('"{}","{}"\n'.format(tf, motif))

@@ -1,0 +1,146 @@
+#!/usr/bin/env python
+doc = """Usage: score-predictions [-t TSV] PREDICTIONSFILE...
+
+Options:
+  -t --tsv TSV    Write scores to TSV [default=scores.tsv]
+"""
+
+
+def score_main(submission_fname):
+    # load and parse the submitted filename
+    print(score.fname_pattern)
+    res = re.findall(score.fname_pattern, os.path.basename(submission_fname))
+    if len(res) != 1 or len(res[0]) != 3:
+        raise score.InputError, "The submitted filename ({}) does not match expected naming pattern '{}'".format(
+            submission_fname, score.fname_pattern)
+    else:
+        submission_type, factor, cell_line = res[0]
+
+    # find a matching validation file
+    labels_fname = os.path.join(
+        VALIDATION_LABELS_BASEDIR, "{}.labels.tsv.gz".format(factor))
+    # validate that the matching file exists and that it contains labels that
+    # match the submitted sample
+    header_data = None
+    try:
+        with gzip.open(labels_fname) as fp:
+            header_data = next(fp).split()
+    except IOError:
+        raise score.InputError("The submitted factor, sample combination ({}, {}) is not a valid leaderboard submission.".format(
+            factor, cell_line))
+
+    # Make sure the header looks right
+    assert header_data[:3] == ['chr', 'start', 'stop']
+    labels_file_samples = header_data[3:]
+    # We only expect to see one sample per leaderboard sample
+    if cell_line not in labels_file_samples:
+        raise score.InputError("The submitted factor, sample combination ({}, {}) is not a valid leaderboard submission.".format(
+            factor, cell_line))
+
+    label_index = labels_file_samples.index(cell_line)
+    labels, scores = verify_file_and_build_scores_array(
+        labels_fname, submission_fname, label_index)
+    full_results = ClassificationResult(labels, scores.round(), scores)
+    return full_results
+
+
+#
+# Load libraries
+#
+from docopt import docopt
+import pandas as pd
+import numpy as np
+import re
+import saturn.score as score
+import sys
+import os
+from joblib import Parallel, delayed
+import multiprocessing
+
+
+#
+# Parse options
+#
+opts = docopt(doc)
+predfiles = opts['PREDICTIONSFILE']
+tsvfile = opts['--tsv']
+
+
+#
+# Set up data frame
+#
+fdr_cutoffs = (.05, .10, .25, .50)
+data = np.empty((len(predfiles), 2 + len(fdr_cutoffs)))
+
+
+def map_bound_values(b):
+    if 'U' == b:
+        return 0
+    if 'A' == b:
+        return -1
+    if 'B' == b:
+        return 1
+
+
+def scorefile(predictionsfile):
+    """
+    Score a predictions file.
+    """
+    #
+    # Load predictions
+    #
+    predictions = pd.read_table(
+        predictionsfile,
+        names=['chrom', 'start', 'end', 'pred', 'bound'])
+    labels = np.array(map(map_bound_values, predictions.bound.values))
+    scores = predictions.pred.values
+
+    #
+    # Score predictions
+    #
+    full_results = score.ClassificationResult(labels, scores.round(), scores)
+
+    #
+    # Print results
+    #
+    print('AUROC={:.3f}; AUPRC={:.3f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; recall@{}={:.6f}; {}'.format(
+        full_results.auROC,
+        full_results.auPRC,
+        .05, full_results.recall_at_05_fdr,
+        .10, full_results.recall_at_10_fdr,
+        .25, full_results.recall_at_25_fdr,
+        .50, full_results.recall_at_50_fdr,
+        predictionsfile))
+
+    return full_results
+
+#
+# Score each predictions file
+#
+num_cores = multiprocessing.cpu_count()
+results = Parallel(n_jobs=num_cores)(
+    delayed(scorefile)(predictionsfile) for predictionsfile in predfiles)
+
+#
+# Aggregate scores
+#
+for i, full_results in enumerate(results):
+    #
+    # Update data
+    #
+    data[i, 0] = full_results.auROC
+    data[i, 1] = full_results.auPRC
+    data[i, 2] = full_results.recall_at_05_fdr
+    data[i, 3] = full_results.recall_at_10_fdr
+    data[i, 4] = full_results.recall_at_25_fdr
+    data[i, 5] = full_results.recall_at_50_fdr
+
+#
+# Create data frame
+#
+reccols = map(lambda c: 'recall_{:02d}'.format(int(100 * c)), fdr_cutoffs)
+colnames = ['AUROC', 'AUPRC'] + list(reccols)
+df = pd.DataFrame(data=data, columns=colnames)
+df['file'] = pd.Series(predfiles, index=df.index)
+print(df)
+df.to_csv(tsvfile, sep='\t', index=False)

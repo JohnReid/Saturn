@@ -1,1 +1,24 @@
-STEME
+#
+# For general interaction and scripting
+docopt
+joblib
+jupyter
+pyzmq
+h5py
+pandas
+rpy2
+sklearn
+neovim
+#
+# For HINT
+cython
+ngslib
+#
+# For neural networks
+keras
+#
+# For bioinformatics
+biopython
+pyBigWig
+# Install John's fork of pyprg
+git+https://github.com/JohnReid/prg.git#subdirectory=Python_package

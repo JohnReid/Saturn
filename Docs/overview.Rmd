@@ -1,0 +1,248 @@
+---
+title: "ENCODE DREAM Challenge"
+author: John Reid
+output: pdf_document
+---
+
+```{r echo=FALSE, eval=FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('overview.Rmd')
+```
+
+
+```{r parseCombos, echo=FALSE, message=FALSE}
+library(printr)
+library(Saturn)
+library(stringr)
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(ggthemes)
+#
+# Parse the information about the TFs.
+scraped <-
+'ARID3A 	HepG2 	K562 	
+ATF2 	GM12878, H1-hESC, MCF-7 	K562 	HepG2
+ATF3 	HCT116, H1-hESC, HepG2, K562 	liver 	
+ATF7 	GM12878, HepG2, K562 	MCF-7 	
+CEBPB 	A549, H1-hESC, HCT116, HeLa-S3, HepG2, IMR-90, K562 	MCF-7 	
+CREB1 	GM12878, H1-hESC, HepG2, K562 	MCF-7 	
+CTCF 	A549, H1-hESC, HeLa-S3, HepG2, IMR-90, K562, MCF-7 	GM12878 	PC-3, induced_pluripotent_stem_cell
+E2F1 	GM12878, HeLa-S3 		K562
+E2F6 	A549, H1-hESC, HeLa-S3 	K562 	
+EGR1 	GM12878, H1-hESC, HCT116, MCF-7 	K562 	liver
+EP300 	GM12878, H1-hESC, HeLa-S3, HepG2, K562, SK-N-SH 	MCF-7 	
+FOXA1 	HepG2 	MCF-7 	liver
+FOXA2 	HepG2 		liver
+GABPA 	GM12878, H1-hESC, HeLa-S3, HepG2, MCF-7, SK-N-SH 	K562 	liver
+GATA3 	A549, SK-N-SH 	MCF-7 	
+HNF4A 	HepG2 		liver
+JUND 	HCT116, HeLa-S3, HepG2, K562, MCF-7, SK-N-SH 	H1-hESC 	liver
+MAFK 	GM12878, H1-hESC, HeLa-S3, HepG2, IMR-90 	K562, MCF-7 	
+MAX 	A549, GM12878, H1-hESC, HCT116, HeLa-S3, HepG2, K562, SK-N-SH 	MCF-7 	liver
+MYC 	A549, HeLa-S3, K562, MCF-7 	HepG2 	
+NANOG 	H1-hESC 		induced_pluripotent_stem_cell
+REST 	H1-hESC, HeLa-S3, HepG2, MCF-7, Panc1, SK-N-SH 	K562 	liver
+RFX5 	GM12878, HeLa-S3, MCF-7, SK-N-SH 	HepG2 	
+SPI1 	GM12878 	K562 	
+SRF 	GM12878, H1-hESC, HCT116, HepG2, K562 	MCF-7 	
+STAT3 	HeLa-S3 	GM12878 	
+TAF1 	GM12878, H1-hESC, HeLa-S3, K562, SK-N-SH 	HepG2 	liver
+TCF12 	GM12878, H1-hESC, MCF-7, SK-N-SH 	K562 	
+TCF7L2 	HCT116, HeLa-S3, Panc1 	MCF-7 	
+TEAD4 	A549, H1-hESC, HCT116, HepG2, K562, SK-N-SH 	MCF-7 	
+YY1 	GM12878, H1-hESC, HCT116, HepG2, SK-N-SH 	K562 	
+ZNF143 	GM12878, H1-hESC, HeLa-S3, HepG2 	K562 	'
+lines <- str_split(scraped, fixed('\n'))[[1]]
+parse.line <- function(l) {
+    # print(l)
+    parsed <- str_trim(str_split(l, fixed('\t'), 4)[[1]])
+    # parsed[[2]] <- str_split(parsed[[2]], fixed(', '))[[1]]
+    # print(parsed)
+    parsed
+}
+parsed <- lapply(lines, parse.line)
+split.for.col <- function(col) {
+    if (2 == col) return('train')
+    if (3 == col) return('ladder')
+    if (4 == col) return('submit')
+}
+parse.tfs <- function(parsed, col) {
+    data.frame(
+        TF=parsed[[1]],
+        cell=str_split(parsed[[col]], fixed(', '))[[1]],
+        split=split.for.col(col))
+}
+parse.cols <- function(parsed) {
+    res <- parse.tfs(parsed, 2)
+    if (length(parsed) > 2) res <- rbind(res, parse.tfs(parsed, 3))
+    if (length(parsed) > 3) res <- rbind(res, parse.tfs(parsed, 4))
+    res %>% filter("" != cell)
+}
+tfs <- do.call(rbind, lapply(parsed, parse.cols))
+tf.levels <- levels(tfs$TF)
+cell.levels <- levels(tfs$cell)
+#
+# Add information about which TF/cell type combos are true blind
+true.blind.ladder <- data.frame(
+    TF = factor(c('ATF2', 'ATF7', 'CREB1', 'FOXA1', 'TCF12'), levels=tf.levels),
+    cell = factor(c('K562', 'MCF-7', 'MCF-7', 'MCF-7', 'K562'), levels=cell.levels),
+    true.blind = TRUE)
+tfs <- tfs %>% left_join(true.blind.ladder) %>%
+    mutate(
+        true.blind = ifelse(is.na(true.blind), 'submit' == split, true.blind),
+        split.blind = ifelse('ladder'==split,
+                             ifelse(true.blind, 'ladder.blind', 'ladder'),
+                             as.character(split)))
+```
+
+
+# The ENCODE-DREAM challenge
+
+The [challenge](https://www.synapse.org/#!Synapse:syn6131484/wiki/) is to
+predict cell-type specific binding of transcription factors (TFs) using four
+types of data:
+
+- DNA sequence: a reference human genomic sequence
+- DNA shape: the physical shape of the genome
+- DNase-seq: experimental evidence for how open and accessible regions of the genome are
+- RNA-seq: gene expression levels
+
+
+## TF/cell-type combinations
+
+TFs have different binding profiles in different cell types. `r length(unique(tfs$TF))`
+TFs and `r length(unique(tfs$cell))` cell types are represented in the data although not
+all combinations are present.
+
+```{r, echo=FALSE}
+ggplot(tfs, aes(TF, cell)) +
+    geom_tile(aes(fill=split.blind), colour='white') +
+    scale_fill_few() +
+    theme_tufte() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
+```
+
+The prediction task boils down to predicting binding of the TF in a cell type
+in which you have no binding data for that specific TF. In addition you are
+evaluated on your predictions only on chromosomes for which you have no data
+for any TF/cell type combination. Liver is by far the most prevalent cell type
+in those cell types used in the evaluation of the final submissions. There is
+no training data for liver for any TFs although it is a ladder cell type for
+ATF3.
+
+
+## Data
+
+
+### TF binding
+
+TF binding is measured using the ChIP-seq protocol and converted to a binary
+score for sliding windows of 200bp. The windows slide by 50bp. For each 200bp
+location, binding is defined as bound (B), unbound (U) or ambiguous (A). In
+addition the challenge provides more detailed information from the ChIP-seq
+experiments including conservative and relaxed estimates of peaks and
+fold-control signals showing how enriched the ChIP-seq experiment was over a
+control background experiment. It is not clear how useful the extra information
+will be as it will obviously not be available on the held-out data.
+
+
+### DNA sequence
+
+The human reference genome is over 3 billion base pairs long. Each base is
+represented as a character: adenine (A); cytosine (C); guanine (G) and thymine
+(T). The challenge is restricted to chromosomes 1-22 and chromosome X. All data
+in the challenge are defined with respect to release GRCh37/hg19.  TFs tend to
+prefer to bind specific sequences. These preferences are summarised in binding
+motifs but these are not known for all TFs. The only external data that is
+allowed to be used in this challenge are libraries of TF-DNA binding motifs.
+Obviously this data is not cell-type specific.
+
+
+### DNase-seq
+
+Information on chromatin accessibility on a per-cell-type basis will be
+available in four formats:
+
+- conservative peaks
+- relaxed peaks
+- filtered BAM alignment files
+- fold-enrichment signal coverage tracks
+
+The first two will be much easier to use as they summarise the last two.
+
+
+### DNA shape
+
+Participants are encouraged to use the [DNAshapeR](http://tsupeichiu.github.io/DNAshapeR/) to
+calculate DNA shape features across the genome. This information is not cell-type specific but
+has been shown to be predictive of TF-DNA binding. Note that `DNAshapeR` requires a version of
+R $> 3.3$.
+
+
+### Gene expression
+
+Gene expression is regulated by TF binding and so should be useful indirectly to infer binding.
+The major difficulties are that:
+
+- It is not known which locations on the genome regulate which genes. Commonly TF binding sites
+  regulate the closest gene but this is not always the case.
+- Several TFs can combine in an unknown way to regulate a gene.
+- There are other mechanisms of gene regulation that will confound the relationship.
+
+
+
+## Transcription factors
+
+
+### Motifs
+
+- Hard to find motif for *TAF1*. Is *TBP* a good motif to use?
+
+
+
+
+## Cell types
+
+There are 14 cell types, 3 of which have never had any TF-binding released under ENCODE
+
+* PC-3
+* induced pluripotent stem cells
+* liver
+
+Most of the final submission will be predictions of binding for the whole
+genome in these 3 cell types for a subset of TFs. In addition whole genome
+predictions will be required for ATF2 in HEPG2 cells and E2F1 in K562 cells.
+Some metadata on the cell types:
+
+```{r cellTypes, echo=FALSE}
+cells.csv <- 'cell,lineage,tissue,karyotype,sex,description
+"HepG2",endoderm,liver,cancer,M,
+"K562",mesoderm,blood,cancer,F,
+"GM12878",mesoderm,blood,normal,F,
+"H1-hESC",inner cell mass,embryonic stem cell,normal,M,
+"MCF-7",ectoderm,breast,cancer,F,
+"HCT116",,colon,cancer,M,
+"liver",,liver,,,
+"A549",endoderm,epithelium,cancer,M,
+"HeLa-S3",ectoderm,cervix,cancer,F,
+"IMR-90",endoderm,lung,normal,F,
+"induced_pluripotent_stem_cell",,,,,
+"PC-3",,prostate,cancer,M,
+"SK-N-SH",ectoderm,brain,cancer,F,
+"Panc1",,pancreas,cancer,M,'
+cells <-
+    as.data.frame(readr::read_csv(cells.csv)) %>%
+    mutate(
+        cell = factor(cell, levels=levels(tfs$cell)),
+        cell.r = rify(cell),
+        lineage = factor(lineage),
+        tissue = factor(tissue),
+        karyotype = factor(karyotype),
+        sex = factor(sex))
+knitr::kable(cells %>% select(-description, -cell.r))
+# devtools::use_data(cells, overwrite=TRUE)
+```

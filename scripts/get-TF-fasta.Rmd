@@ -1,0 +1,82 @@
+---
+title: "Get negative and position FASTA sequences for a TF"
+author: John Reid
+output: html_document
+params:
+  TF: CTCF
+---
+
+```{r renderMe, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+if (FALSE) {
+    rmarkdown::render("get-TF-fasta.Rmd", params = list(TF = "CTCF"))
+} else {
+    for (TF in levels(tfs$TF)) {
+        rmarkdown::render(
+            "get-TF-fasta.Rmd",
+            output_file = str_c('FASTA-', TF, '.html'),
+            params = list(TF = TF))
+    }
+}
+```
+
+Load the ChIP data for `{r params$TF}`.
+```{r loadChip}
+library(Saturn)
+TF <- params$TF
+chip <- read.chip.labels(TF)
+```
+
+Analyse the ChIP data to see which regions bind in at least one cell type.
+```{r getPositive}
+tf.cells <- cell.names(chip)
+is.bound <- Map(function(x) 'B' == x, as.list(chip[tf.cells]))
+bound <- Reduce(function(x,y) x | y, is.bound)
+# Check we have at least as many unbound sequences
+stopifnot(sum(! bound) >= sum(bound))
+# Generate ranges
+positive <- regions.to.ranges(chip[bound,])
+# Make sure we have right number
+stopifnot(sum(bound) == length(positive))
+```
+We have `r length(positive)` positive ChIP regions.
+
+Determine maximum DNase levels across cell types.
+```{r dnase}
+dnase.cells <- lapply(as.character(tf.cells), function(cell) summarise.dnase(cell, 'relaxed'))
+dnase.max <- Reduce(pmax, dnase.cells)
+```
+
+Sort the training regions by their maximum DNase levels and select those with
+the highest levels that are not bound
+```{r getNegative}
+# Get the maximum DNase levels in the training regions
+dnase.max.idx <- order(dnase.max[training.region.test.idxs()], decreasing = TRUE)
+# Limit to the regions that are unbound and only as many as in the positive set
+unbound.dnase.max.idx <- dnase.max.idx[as.vector(! bound)][1:length(positive)]
+# Find the negative regions with the lowest and highest dnase levels
+highest.neg.dnase <- dnase.max[train.to.test.idx(unbound.dnase.max.idx[1])]
+lowest.neg.dnase  <- dnase.max[train.to.test.idx(unbound.dnase.max.idx[length(positive)])]
+message('First negative region has DNase level: ', highest.neg.dnase)
+message('Last  negative region has DNase level: ', lowest.neg.dnase)
+# Generate ranges
+negative <- regions.to.ranges(chip[unbound.dnase.max.idx,])
+# Check we have correct number
+stopifnot(length(negative) == length(positive))
+```
+We have `r length(negative)` negative ChIP regions.
+
+Write the positive and negative sequences to separate FASTA files.
+```{r writeSeqs}
+write.seqs <- function(gr, label) {
+    seqs <- BSgenome::getSeq(hg19, gr)
+    names(seqs) <- stringr::str_c(TF, ".", label, ".", rtracklayer::chrom(gr), ':', start(gr), ':', end(gr))
+    fasta <- file.path(saturn.data(), 'ChIPseq', 'seqs', stringr::str_c(TF, '-', label, '.fa'))
+    Biostrings::writeXStringSet(seqs, fasta)
+}
+write.seqs(positive, 'pos')
+write.seqs(negative, 'neg')
+```

@@ -1,0 +1,13 @@
+cudnn-8.0-linux-x64-v5.0-ga.tgz
+scratch
+models
+plots
+data
+virtualenv
+virtualenv-py2
+virtualenv-py3
+slurm-*.out
+slurm-*.err
+slurm.*.out
+slurm.*.err
+machine.file.*

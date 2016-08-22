@@ -1,0 +1,34 @@
+#!/bin/bash -e
+#
+# Submit a wellington job for each cell
+#
+
+CELLS="
+    A549
+    GM12878
+    H1-hESC
+    HCT116
+    HeLa-S3
+    HepG2
+    IMR-90
+    induced_pluripotent_stem_cell
+    K562
+    liver
+    MCF-7
+    Panc1
+    PC-3
+    SK-N-SH
+"
+
+if [ -z "${SATURNDIR}" ]
+then
+    echo "Saturn not activated."
+    exit -1
+fi
+cd $SATURNDIR/slurm
+for CELL in  $CELLS
+do
+    echo $CELL
+    sbatch $SATURNDIR/python/bin/run-wellington $CELL relaxed
+    sbatch $SATURNDIR/python/bin/run-wellington $CELL conservative
+done

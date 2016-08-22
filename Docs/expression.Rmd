@@ -1,0 +1,90 @@
+---
+title: "Expression data"
+author: John Reid
+output: html_document
+---
+
+```{r renderMe, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render("expression.Rmd")
+```
+
+
+# Load
+
+Load the expression data.
+```{r load, message = FALSE}
+library(Saturn)
+library(biomaRt)
+library(ggplot2)
+library(ggthemes)
+expr <- lapply(cell.levels, load.avg.expr)
+names(expr) <- cell.levels
+```
+
+
+# TF Ensembl IDs
+
+Retrieve Ensembl IDs for TFs
+```{r}
+# listMarts()
+grch37 <- useMart(biomart = "ENSEMBL_MART_ENSEMBL",
+                  host = "grch37.ensembl.org",
+                  path = "/biomart/martservice")
+# listDatasets(grch37)
+dataset <- useDataset("hsapiens_gene_ensembl", mart = grch37)
+# listFilters(dataset)
+tf.ensembl <-
+    getBM(
+        attributes = c('hgnc_symbol', 'ensembl_gene_id'),
+        filters = 'hgnc_symbol',
+        values = tf.levels,
+        mart = dataset) %>%
+    rename(TF = hgnc_symbol) %>%
+    mutate(TF = factor(TF, tf.levels),
+           ensembl_gene_id = factor(ensembl_gene_id, ensembl.gene.ids)) %>%
+    filter('LRG_' != stringr::str_sub(ensembl_gene_id, 1, 4))
+```
+
+
+# TF Expression
+
+Analyse the expression levels of the TFs across the relevant cell types.
+```{r tfExpr, message = FALSE, fig.width = 18, fig.height = 12}
+tf.expr <-
+    tfs %>%
+    dplyr::select(TF, cell, split) %>%
+    left_join(
+        do.call(
+            rbind,
+            lapply(names(expr),
+                function(cell) left_join(tf.ensembl, expr[[cell]]) %>%
+                    mutate(cell = factor(cell, levels = cell.levels)))))
+ggplot(tf.expr, aes(x = cell, y = log.TPM, colour = split)) +
+    geom_jitter(height = 0, size = 3) +
+    facet_wrap(~ TF, nrow = 4) +
+    scale_colour_few() +
+    theme_few() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+ggsave(file.path('..', 'Plots', 'tf-expr.pdf'), width = 18, height = 12, units = 'in')
+```
+
+
+# Save
+
+Save the expression levels of the TFs
+```{r save, eval = FALSE}
+devtools::use_data(tf.expr, overwrite = TRUE)
+```
+
+
+# Session information
+
+Finished at `r date()` on `r Sys.info()[["nodename"]]`.
+```{r sessionInfo}
+devtools::session_info()
+largest.objects()
+```

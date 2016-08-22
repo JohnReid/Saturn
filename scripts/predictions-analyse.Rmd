@@ -1,0 +1,173 @@
+---
+title: "Analyse a set of predictions"
+author: John Reid
+output: pdf_document
+params:
+    tf: GATA3
+    cell.valid: A549
+    predictions.file: ../Data/Predictions/predictions.GATA3.A549.Known.tsv
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('predictions-analyse.Rmd')
+```
+
+```{r params, echo = FALSE}
+library(Saturn)
+library(ggplot2)
+library(ggthemes)
+library(ggbio)
+if (exists('params', inherits = FALSE)) {
+    tf <- factor(params$tf, levels = tf.levels)
+    cell.valid <- factor(params$cell.valid, levels = cell.levels)
+    predictions.file <- params$predictions.file
+} else {
+    tf <- factor('GATA3', levels = tf.levels)
+    cell.valid <- factor('A549', levels = cell.levels)
+    predictions.file <- '../Data/Predictions/predictions.GATA3.A549.Known.tsv'
+}
+```
+
+
+# Motif scans
+
+Load motif scans.
+```{r loadMotifScans}
+motif.tags <- 'Known'
+motif.dirs <- lapply(motif.tags, motif.dir)
+motif.scans <- lapply(motif.dirs, load.motif.dir)
+names(motif.scans) <- motif.tags
+```
+
+
+# Digital genomic footprinting
+
+Load DGF predictions.
+```{r loadDGF}
+dgf <- load.wellington(cell.valid)
+```
+
+
+# Predictions
+
+Load predictions
+```{r loadPreds}
+tags <- parse.predictions.file(predictions.file)
+preds <- with(
+    readr::read_tsv(
+        predictions.file,
+        col_names = c('chrom', 'start', 'end', 'pred', 'bound'),
+        progress = FALSE),
+    DataFrame(
+        chrom = Rle(factor(chrom, levels = chr.levels)),
+        start = start,
+        pred = pred,
+        bound = Rle(factor(bound, levels = binding.levels))))
+# Convert to ranges object for aggregation
+preds.ranges <- regions.to.ranges(preds)
+mcols(preds.ranges) <- subset(preds, select = -c(chrom, start))
+```
+
+
+# ChIP
+
+Load the ChIP peak levels for the test regions.
+```{r loadChIP}
+peaks <- load.chip.peaks(cell.valid, tf, 'conservative')
+colnames(mcols(peaks))
+sapply(mcols(peaks), range)
+range(mcols(peaks)$signal)
+range(mcols(peaks)$pValue)
+range(mcols(peaks)$qValue)
+range(mcols(peaks)$peak)
+preds$chip.signal <- agg.by.region(peaks, preds.ranges, 'signal', max)
+preds$chip.qvalue <- agg.by.region(peaks, preds.ranges, 'qValue', max)
+preds$chip.peak <- agg.by.region(peaks, preds.ranges, 'peak', max)
+```
+
+
+Check correlations
+```{r checkCor}
+with(preds, cor(as.integer(bound), as.vector(chip.qvalue)))
+with(preds, cor(as.integer(bound), as.vector(chip.signal)))
+with(preds, cor(as.integer(bound), as.vector(chip.peak)))
+```
+
+
+# Plots
+
+Plot predictions against ChIP values.
+```{r plotPredvsChIP}
+preds.df <- as.data.frame(subset(preds, !(chip.signal == 0 & pred <= 0.25)))
+nrow(preds.df)
+ggplot(preds.df %>% sample_n(10000), aes(x = chip.signal)) +
+    geom_density() +
+    geom_rug() +
+    theme_few()
+
+ggplot(preds.df %>% sample_n(10000), aes(x = pred)) +
+    geom_density() +
+    geom_rug() +
+    theme_few()
+
+ggplot(preds.df %>% sample_n(10000), aes(x = chip.signal, y = pred, colour = bound)) +
+    geom_point(alpha = .5) +
+    theme_few()
+
+ggplot(preds.df %>% sample_n(10000) , aes(x = chip.qvalue, y = pred, color = log10(chip.signal), shape = bound)) +
+    geom_point() +
+    theme_few()
+```
+
+
+# True positives
+
+```{r truePos}
+set.seed(3)
+true.pos <-
+    preds.df %>%
+    filter(pred < .75, 'B' == bound) %>%
+    sample_n(6)
+for (i in 1:nrow(true.pos)) {
+    print(plot.ranges(regions.to.ranges(true.pos[i,]), cell.valid, motif.scans))
+}
+```
+
+
+# False negatives
+
+```{r falseNeg}
+false.neg <-
+    preds.df %>%
+    filter(pred < .25, 'B' == bound) %>%
+    sample_n(6)
+for (i in 1:nrow(false.neg)) {
+    print(plot.ranges(regions.to.ranges(false.neg[i,]), cell.valid, motif.scans))
+}
+```
+
+
+# False positives
+
+```{r falsePos}
+false.pos <-
+    preds.df %>%
+    filter(pred > .75, 'U' == bound) %>%
+    sample_n(6)
+for (i in 1:nrow(false.pos)) {
+    print(plot.ranges(regions.to.ranges(false.pos[i,]), cell.valid, motif.scans))
+}
+```
+
+
+# Session information
+
+`r date()` on `r Sys.info()[["nodename"]]`
+```{r sessionInfo}
+devtools::session_info()
+largest.objects()
+```

@@ -1,0 +1,51 @@
+---
+title: "Motifs"
+author: John Reid
+output: pdf_document
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('motifs.Rmd')
+```
+
+Load the TF-motif associations.
+```{r TF.motif}
+library(Saturn)
+tfs
+sapply(tfs, class)
+tf.motifs <-
+    readr::read_csv(file.path(saturn.data(), 'motifs', 'tf-motifs.csv')) %>%
+    mutate(TF=factor(TF, levels=levels(tfs$TF)),
+           motif=factor(motif))
+sapply(tf.motifs, class)
+tf.motifs[str_detect(tf.motifs$motif, ','),]
+# devtools::use_data(tf.motifs, overwrite = TRUE)
+```
+
+Determine the Emsembl IDs for the TFs.
+```{r ensemblIDs}
+library(biomaRt)
+listEnsembl(GRCh=37)
+ensembl = useEnsembl(biomart="ensembl", dataset="hsapiens_gene_ensembl", GRCh=37)
+listDatasets(ensembl)
+listFilters(ensembl)
+tf.ensembl <- getBM(
+    attributes=c('ensembl_gene_id', 'ensembl_transcript_id', 'hgnc_symbol', 'hgnc_id', 'uniprot_swissprot'),
+    filters = 'hgnc_symbol',
+    values = unique(tfs$TF),
+    mart = ensembl) %>%
+  arrange(hgnc_id) %>%
+  filter('LRG_' != str_sub(ensembl_gene_id, 1, 4))
+tf.ensembl
+# Check we have a result for each TF
+stopifnot(length(unique(tf.ensembl$hgnc_symbol)) == length(unique(tfs$TF)))
+# Check we have at most one result for each TF
+stopifnot(length(unique(tfs$TF)) == length(unique(tf.ensembl$ensembl_gene_id)))
+# devtools::use_data(tf.ensembl, overwrite = TRUE)
+```
+
+Check we have 

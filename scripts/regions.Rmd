@@ -1,0 +1,81 @@
+---
+title: "Ladderboard, training and test regions"
+author: John Reid
+output: html_document
+---
+
+```{r renderMe, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render("regions.Rmd")
+```
+
+
+# Load
+
+Load the regions from the annotation directory.
+```{r load}
+library(Saturn)
+#
+# Ladder regions
+regions.ladder <- load.regions('ladder')
+object.size(regions.ladder)
+#
+# Train regions
+regions.train <- load.regions('train')
+object.size(regions.train)
+#
+# Test regions
+regions.test <- load.regions('test')
+object.size(regions.test)
+```
+Have `r length(regions.ladder)` ladder regions, `r length(regions.train)` train regions and `r length(regions.test)`
+test regions.
+
+Double-check that the test regions are the union of the ladderboard and test regions.
+```{r}
+.union <- GenomicRanges::union(ranges.ladder(), ranges.train())
+stopifnot(length(GenomicRanges::setdiff(.union, ranges.test())) == 0)
+```
+
+Double-check that the ladderboard and train regions don't intersect.
+```{r}
+stopifnot(length(GenomicRanges::intersect(ranges.ladder(), ranges.train())) == 0)
+```
+
+Calculate the indices of the training and ladder regions in the test regions
+```{r trainIdxs}
+regions.as.dt <- function(regions) with(regions,
+  setkey(
+    data.table(
+      chrom = as.factor(chrom),
+      start = as.integer(start)),
+    chrom,
+    start))
+ladder <- regions.as.dt(regions.ladder) %>% mutate(ladder.idx = 1:nrow(regions.ladder))
+train  <- regions.as.dt(regions.train)  %>% mutate(train.idx  = 1:nrow(regions.train))
+test   <- regions.as.dt(regions.test)   %>% mutate(test.idx   = 1:nrow(regions.test))
+regions.train$test.idx  <- merge(test, train )$test.idx
+regions.ladder$test.idx <- merge(test, ladder)$test.idx
+regions.test$ladder.idx <- merge(test, ladder, all.x = TRUE)$ladder.idx
+regions.test$train.idx  <- merge(test, train , all.x = TRUE)$train.idx
+```
+
+
+# Save
+
+Save the regions
+```{r save, eval = FALSE}
+devtools::use_data(regions.ladder, overwrite = TRUE)
+devtools::use_data(regions.train, overwrite = TRUE)
+devtools::use_data(regions.test, overwrite = TRUE)
+```
+
+# Session information
+
+`r date()`
+```{r sessionInfo}
+devtools::session_info()
+```

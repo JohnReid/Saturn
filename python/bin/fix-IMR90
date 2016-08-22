@@ -1,0 +1,32 @@
+#!/bin/bash -e
+#
+# Script to fix all files that are poorly named with 'IMR90' when they should be 'IMR-90'
+#
+
+#
+# Parse arguments
+#
+USAGE="USAGE: $0 <root dir>"
+ROOTDIR=$(readlink -f ${1?:$USAGE})
+echo "Root directory: $ROOTDIR"
+
+#
+# Find all files with poorly named cell
+#
+IMR90FILES=$(find $ROOTDIR -name '*IMR90*')
+# echo $IMR90FILES
+
+#
+# Create a symbolic link for each file.
+# Need to handle filenames with spaces with IFS.
+#
+SAVEIFS=$IFS
+IFS=$(echo -en "\n\b")
+for FILE in $IMR90FILES
+do
+    # echo $FILE
+    NEWFILE=$(echo $FILE|sed 's/IMR90/IMR-90/g')
+    # echo $NEWFILE
+    [ -e $NEWFILE -o -h $NEWFILE ] || ln -s "$FILE" "$NEWFILE"
+done
+IFS=$SAVEIFS

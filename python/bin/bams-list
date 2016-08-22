@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+
+import os
+import re
+
+extract = re.compile('DNASE\\.(.+).biorep([0-9]+)\\.techrep([0-9]+)\\.bam')
+
+bamdir = '../Data/DNASE/bams'
+for filename in os.listdir(bamdir):
+    if filename.startswith('DNASE') and filename.endswith('.bam'):
+        match = extract.match(filename)
+        cell = match.group(1)
+        biorep = match.group(2)
+        techrep = match.group(3)
+        print('{} {} {} {}'.format(filename, cell, biorep, techrep))

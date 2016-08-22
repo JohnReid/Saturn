@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+#
+# Update BAMs according to Anshul's post in DREAM challenge discussion thread
+# https://www.synapse.org/#!Synapse:syn6131484/discussion/threadId=627
+#
+
+import shutil
+import synapseclient
+from synapseclient import Project, Folder, File
+import sys
+import os
+import warnings
+
+
+def download_synid(synid, filename, dest_file):
+    "Download a synapse entity and move it to the destination file."
+    entity = syn.get(synid)
+    if entity.name != filename:
+        raise ValueError('{} != {}'.format(entity.name, filename))
+    shutil.move(entity.path, dest_file)
+    return entity
+
+
+dest_dir = '../Data/DNASE/bams'
+if not os.path.exists(dest_dir):
+    raise ValueError('Destination directory does not exist.')
+
+#
+# Construct a synapse client and login
+#
+syn = synapseclient.Synapse()
+syn.login()
+
+
+#
+# Get one bigwig that changed
+#
+iPSCfile = 'DNASE.induced_pluripotent_stem_cell.fc.signal.bigwig'
+iPSCpath = os.path.join('../Data/DNASE/fold_coverage_wiggles', iPSCfile)
+if not os.path.exists(iPSCpath):
+    warnings.warn("Destination doesn't exist: {}".format(iPSCpath))
+else:
+    os.remove(iPSCpath)
+iPSCentity = download_synid('syn6313524', iPSCfile, iPSCpath)
+
+
+#
+# Modify some files
+#
+to_modify = [
+    ('syn6178055', 'DNASE.H1-hESC.biorep1.techrep1.bam'),
+    ('syn6176276', 'DNASE.IMR90.biorep1.techrep1.bam'),
+    ('syn6176274', 'DNASE.IMR90.biorep1.techrep2.bam'),
+]
+for synid, bam in to_modify:
+    dest_file = os.path.join(dest_dir, bam)
+    if not os.path.exists(dest_file):
+        warnings.warn("Destination doesn't exist: {}".format(dest_file))
+    else:
+        os.remove(dest_file)
+    download_synid(synid, bam, dest_file)
+
+
+#
+# Add some BAMs
+#
+to_add = [
+    ('syn7113332', 'DNASE.A549.biorep1.techrep1.bam'),
+    ('syn7113334', 'DNASE.A549.biorep1.techrep2.bam'),
+    ('syn7113353', 'DNASE.A549.biorep1.techrep3.bam'),
+    ('syn7113266', 'DNASE.GM12878.biorep1.techrep1.bam'),
+    ('syn7113313', 'DNASE.H1-hESC.biorep1.techrep2.bam'),
+    ('syn7113341', 'DNASE.HCT116.biorep1.techrep1.bam'),
+    ('syn7113351', 'DNASE.Panc1.biorep1.techrep1.bam'),
+    ('syn7113329', 'DNASE.SK-N-SH.biorep2.techrep1.bam'),
+]
+for synid, bam in to_add:
+    dest_file = os.path.join(dest_dir, bam)
+    if os.path.exists(dest_file):
+        raise ValueError('Destination already exists: {}'.format(dest_file))
+    download_synid(synid, bam, dest_file)
+
+
+#
+# Remove some BAMs
+#
+to_remove = [
+    'DNASE.IMR90.biorep1.techrep3.bam',
+    'DNASE.IMR90.biorep1.techrep4.bam',
+    'DNASE.HeLa-S3.biorep1.techrep1.bam',
+    'DNASE.HepG2.biorep2.techrep2.bam',
+    'DNASE.K562.biorep2.techrep11.bam',
+]
+for bam in to_remove:
+    path = os.path.join(dest_dir, bam)
+    if not os.path.exists(path):
+        raise ValueError("File doesn't exist: {}".format(path))
+    os.remove(path)

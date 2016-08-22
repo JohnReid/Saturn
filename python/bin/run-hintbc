@@ -1,0 +1,80 @@
+#!/bin/bash -e
+#
+# Run the HINT-BC digital genomic footprinting method
+#
+
+#
+# sbatch directives
+#
+#SBATCH -p mrc-bsu-sand                 # Partition
+#SBATCH -J HINTBC                       # Name of the job
+#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
+#SBATCH --nodes=1                       # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --cpus-per-task=1               # CPUs/task
+#SBATCH --mem=4000                      # How many MB each node is allocated
+#SBATCH --time=05:00:00                 # How much wallclock time will be required?
+#SBATCH -o hintbc-%j.out                # stdout
+#SBATCH -e hintbc-%j.out                # stderr
+#SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
+##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
+                                        # interrupted by node failure or system downtime):
+
+#
+# Parse arguments
+#
+USAGE="USAGE: $0 CELL [conservative|relaxed]"
+CELL=${1?:$USAGE}
+TYPE=${2?:$USAGE}
+
+#
+# Set up variables
+#
+OUTPUTDIR=$SATURNDIR/Data/DNASE/HINT-BC-footprints/$CELL/$TYPE
+INPUTCONFIG=$SATURNDIR/etc/HINT-BC-config/InputMatrix_HINTBC_$CELL_$TYPE.txt
+PEAKS=$SATURNDIR/Data/DNASE/peaks/$TYPE/DNASE.$CELL.$TYPE.bed
+BAM=$SATURNDIR/Data/DNASE/bams/DNASE.$CELL.merged.bam
+echo "Cell      : $CELL"
+echo "Peak type : $TYPE"
+echo "Peaks     : $PEAKS"
+echo "BAM       : $BAM"
+echo "Config    : $INPUTCONFIG"
+
+#
+# Check files and directories
+#
+if [ -d $OUTPUTDIR ]
+then
+    echo "Output directory already exists: $OUTPUTDIR"
+    exit
+fi
+if [ ! -s $PEAKS ]
+then
+    echo "Peaks file does not exist: $PEAKS"
+    exit
+fi
+if [ ! -s $BAM ]
+then
+    echo "BAM file does not exist: $BAM"
+    exit
+fi
+mkdir -p $OUTPUTDIR
+
+#
+# Set up configuration
+#
+echo "Writing configuration: $INPUTCONFIG"
+if [ ! -s $INPUTCONFIG ]
+then
+    (
+        echo "name    type    file    data    group"
+        echo "HS2     regions $PEAKS  HS      DU_${CELL}_HINTBC"
+        echo "DNase   reads   $BAM    DNASE   DU_${CELL}_HINTBC"
+    ) >$INPUTCONFIG
+fi
+
+#
+# Run HINT-BC
+#
+echo "Running HINT-BC"
+rgt-hint --default-bias-correction --output-location $OUTPUTDIR $INPUTCONFIG

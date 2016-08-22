@@ -1,0 +1,19 @@
+#!/bin/bash -e
+
+#
+# Submit a featurise scan job for each TF
+#
+for TF in \
+    ARID3A  E2F1   GATA3  REST   TCF7L2 \
+    ATF2    E2F6   HNF4A  RFX5   TEAD4 \
+    ATF3    EGR1   JUND   SPI1   YY1 \
+    ATF7    EP300  MAFK   SRF    ZNF143 \
+    CEBPB   FOXA1  MAX    STAT3 \
+    CREB1   FOXA2  MYC    TAF1 \
+    CTCF    GABPA  NANOG  TCF12
+do
+    echo $TF
+    TAG=DREME-$TF
+    SCANDIR=$SATURNDIR/Data/ChIPseq/seqs/$TAG/genome-scan
+    sbatch $SATURNDIR/python/bin/scan-featurise $SCANDIR $TAG
+done
