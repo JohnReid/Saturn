@@ -23,8 +23,8 @@ predict.R [-t] [--sample=PROP] [--use-zero-dnase] [--features=NAME]... TF VALIDA
 
 Options:
   -f --features=NAME ... Use NAME features
-  --use-zero-dnase       Fit regions with zero DNase levels [default='False']
-  -s --sample=PROP       Subsample training regions to with proportion PROP [default=1]" -> doc
+  --use-zero-dnase       Fit regions with zero DNase levels [default: FALSE]
+  -s --sample=PROP       Subsample training regions to with proportion PROP [default: 1]" -> doc
 
 
 #
@@ -45,6 +45,7 @@ library(Saturn)
 # .args <- "--motif=Known ARID3A K562"
 # .args <- "--motif=Known GATA3 A549"
 # .args <- "-f DNase -f KnownMotifs -s .01 GABPA SK-N-SH"
+# .args <- "-f DNase -f DREMEWell ATF2 GM12878"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
@@ -56,9 +57,12 @@ if (is.na(cell.valid)) stop('Unknown validation cell specified.')
 feat.names <- opts$features
 sample.prop <- as.numeric(opts$sample)
 use.zero.dnase <- as.logical(opts[['use-zero-dnase']])
+message('Features: ', toString(feat.names))
 if (! 'DNase' %in% feat.names) {
   message('No DNase feature included in arguments!!!')
 }
+message('Sample proportion: ', toString(sample.prop))
+message('Use zero DNase: ', toString(use.zero.dnase))
 
 
 #
