@@ -11,7 +11,9 @@ options(warn = 2)
 #
 # Load libraries
 #
+devtools::load_all()
 library(ggplot2)
+library(ggthemes)
 library(stringr)
 
 
@@ -23,7 +25,7 @@ parse.filename <- function(file.name) str_split_fixed(basename(file.name), fixed
 #
 # Parse options
 #
-# .args <- "my-scores.tsv"
+# .args <- "../slurm/scores-with-Well.tsv"
 if (! exists(".args")) .args <- commandArgs(TRUE)  # Check if we have manually set arguments for debugging
 opts <- docopt::docopt(doc, args = .args)
 scorestsv <- opts$SCORESTSV
@@ -31,6 +33,7 @@ plots.dir <- '../Plots'
 plots.tag <- 'scores'
 
 plots.filename <- function(plot.name) file.path(plots.dir, str_c(plots.tag, '-', plot.name, '.pdf'))
+save.plot <- function(plot.name) ggsave(plots.filename(plot.name), width = 18, height = 12, units = 'in')
 
 
 #
@@ -63,7 +66,7 @@ ggplot(scores, aes(x = AUROC, y = AUPRC, label = TF, colour = motif.tags)) +
   geom_label() +
   scale_colour_few() +
   theme_few()
-ggsave(plots.filename('AUROC-AUPRC'))
+save.plot('AUROC-AUPRC')
 # AUPRC by TF
 ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, colour = motif.tags)) +
   geom_boxplot() +
@@ -71,7 +74,7 @@ ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, col
   labs(x = 'TF') +
   scale_colour_few() +
   theme_few()
-ggsave(plots.filename('AUPRC-by-TF'))
+save.plot('AUPRC-by-TF')
 # AUPRC by cell
 ggplot(scores.filtered, aes(x = reorder(cell, AUPRC, FUN = median), y = AUPRC, colour = motif.tags)) +
   geom_boxplot() +
@@ -79,7 +82,7 @@ ggplot(scores.filtered, aes(x = reorder(cell, AUPRC, FUN = median), y = AUPRC, c
   labs(x = 'cell') +
   scale_colour_few() +
   theme_few()
-ggsave(plots.filename('AUPRC-by-cell'))
+save.plot('AUPRC-by-cell')
 # recall at 10% FDR by TF
 ggplot(scores.filtered, aes(x = reorder(TF, recall_10, FUN = median), y = recall_10, colour = motif.tags)) +
   geom_boxplot() +
@@ -87,7 +90,7 @@ ggplot(scores.filtered, aes(x = reorder(TF, recall_10, FUN = median), y = recall
   labs(x = 'TF') +
   scale_colour_few() +
   theme_few()
-ggsave(plots.filename('recall-10-by-TF'))
+save.plot('recall-10-by-TF')
 # recall at 50% FDR by TF
 ggplot(scores.filtered, aes(x = reorder(TF, recall_50, FUN = median), y = recall_50, colour = motif.tags)) +
   geom_boxplot() +
@@ -95,4 +98,4 @@ ggplot(scores.filtered, aes(x = reorder(TF, recall_50, FUN = median), y = recall
   labs(x = 'TF') +
   scale_colour_few() +
   theme_few()
-ggsave(plots.filename('recall-50-by-TF'))
+save.plot('recall-50-by-TF')
