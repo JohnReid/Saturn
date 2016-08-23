@@ -1,4 +1,19 @@
 #!/usr/bin/env python
+#!
+#! sbatch directives begin here ###############################
+#!
+#SBATCH -p mrc-bsu-sand                 # Partition
+#SBATCH -J SCOREPRED                    # Name of the job
+#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
+#SBATCH --nodes=1                       # How many whole nodes should be allocated?
+#SBATCH --ntasks=16                     # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --mem=60000                     # How many MB each node is allocated
+#SBATCH --time=06:00:00                 # How much wallclock time will be required?
+#SBATCH -o score-pred-%j.out            # stdout
+#SBATCH -e score-pred-%j.out            # stderr
+#SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
+##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
+                                        # interrupted by node failure or system downtime):
 doc = """Usage: score-predictions [-t TSV] PREDICTIONSFILE...
 
 Options:
