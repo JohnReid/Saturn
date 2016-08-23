@@ -10,7 +10,7 @@
 #SBATCH -A MRC-BSU-SL2                  # Which project should be charged
 #SBATCH --nodes=1                       # How many whole nodes should be allocated?
 #SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
-#SBATCH --mem=08000                     # How many MB each node is allocated
+#SBATCH --mem=16000                     # How many MB each node is allocated
 #SBATCH --time=03:00:00                 # How much wallclock time will be required?
 #SBATCH -o prepfeat-%j.out              # stdout
 #SBATCH -e prepfeat-%j.out              # stderr
@@ -41,12 +41,15 @@ rds.files <- opts[['FEAT']]
 
 
 #
-# Convert the objects
+# Convert the objects if necessary
 #
 for (rds.file in rds.files) {
   message('Loading: ', rds.file)
   obj <- readRDS(rds.file)
-  obj.pp <- as(obj, 'Matrix')
-  message('Saving: ', rds.file)
-  saveRDS(obj.pp, rds.file)
+  if (! is(obj, 'Matrix')) {
+    message('Converting: ', rds.file)
+    obj.pp <- as(obj, 'Matrix')
+    message('Saving: ', rds.file)
+    saveRDS(obj.pp, rds.file)
+  }
 }
