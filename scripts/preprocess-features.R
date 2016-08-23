@@ -53,3 +53,4 @@ for (rds.file in rds.files) {
     saveRDS(obj.pp, rds.file)
   }
 }
+message('Done')
