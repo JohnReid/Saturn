@@ -19,11 +19,13 @@
 ##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
                                         # interrupted by node failure or system downtime):
 "Usage:
-predict.R [-t] [--sample=PROP] [--use-zero-dnase] [--features=NAME]... TF VALIDATIONCELL
+predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 
 Options:
-  -f --features=NAME ... Use NAME features
+  --method=METHOD        Use METHOD [default: glmnet]
+  -f --features=NAME     Use NAME features
   --use-zero-dnase       Fit regions with zero DNase levels [default: FALSE]
+  --max-boosting=MAXIMUM MAXIMUM number of boost rounds for xgboost method [default: 300]
   -s --sample=PROP       Subsample training regions to with proportion PROP [default: 1]" -> doc
 
 
@@ -46,6 +48,7 @@ library(Saturn)
 # .args <- "--motif=Known GATA3 A549"
 # .args <- "-f DNase -f KnownMotifs -s .01 GABPA SK-N-SH"
 # .args <- "-f DNase -f DREMEWell ATF2 GM12878"
+# .args <- "--method=xgboost -f DNase -f DREMEWell ATF2 GM12878"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
@@ -54,12 +57,14 @@ tf <- factor(opts$TF, tf.levels)
 if (is.na(tf)) stop('Unknown TF specified.')
 cell.valid <- factor(opts$VALIDATIONCELL, levels = cell.levels)
 if (is.na(cell.valid)) stop('Unknown validation cell specified.')
+method <- opts$method
 feat.names <- opts$features
 sample.prop <- as.numeric(opts$sample)
+max.boost.rounds <- as.integer(opts[['max-boosting']])
 use.zero.dnase <- as.logical(opts[['use-zero-dnase']])
 message('Features: ', toString(feat.names))
 if (! 'DNase' %in% feat.names) {
-  message('No DNase feature included in arguments!!!')
+  message('WARNING: No DNase feature included in arguments!!!')
 }
 message('Sample proportion: ', toString(sample.prop))
 message('Use zero DNase: ', toString(use.zero.dnase))
@@ -69,9 +74,22 @@ message('Use zero DNase: ', toString(use.zero.dnase))
 # Construct output filenames
 #
 feat.tags <- do.call(stringr::str_c, c(feat.names, list(sep = "_")))
-fit.id <- stringr::str_c(as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
-fit.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('fit.', fit.id, '.rds'))
+fit.id <- stringr::str_c(method, '.', as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
 predictions.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('predictions.', fit.id, '.tsv'))
+
+
+#
+# Load prediction package
+#
+if ('xgboost' == method) {
+  library(xgboost)
+  fit.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('fit.', fit.id, '.xgb'))
+} else if ('glmnet' == method) {
+  library(glmnet)
+  fit.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('fit.', fit.id, '.rds'))
+} else {
+  stop(stringr::str_c('Unknown method: ', method))
+}
 
 
 #
@@ -159,6 +177,11 @@ regions.for.cell <- function(cell) {
 }
 
 
+#' Get the proportion bound
+#'
+prop.bound <- function(binding) sum('B' == binding) / length(binding)
+
+
 #
 # Load features
 #
@@ -178,6 +201,7 @@ load.cell.data <- function(
     keep <- keep & ('A' != response)
   }
   response <- response[keep]
+  message(cell, ': Proportion bound: ', prop.bound(response))
   #
   # Load and cbind the features
   mat <-
@@ -193,6 +217,7 @@ load.cell.data <- function(
             ' to ', sum(dnase.non.zeros))
     mat <- mat[dnase.non.zeros,]
     response <- response[dnase.non.zeros]
+    message(cell, ': Proportion bound: ', prop.bound(response))
   }
   #
   # Subsample the regions if requested
@@ -210,26 +235,75 @@ message('Creating training data')
 train.data <- lapply(cell.train, load.cell.data)
 train.feat <- do.call(rbind, lapply(train.data, function(d) d$features))
 train.resp <- do.call(c,     lapply(train.data, function(d) d$response))
-
-
-#
-# Fit a logistic regression
-#
 message('Training matrix size: ', object.size(train.feat))
 message('# regions : ', nrow(train.feat))
 message('# features: ', ncol(train.feat))
-message('Fitting model')
-system.time(cvfit <- glmnet::cv.glmnet(train.feat, train.resp, family = 'binomial'))
+
+
+#
+# Do cross-validation on number of boosting rounds
+#
+xgboost.fit <- function(
+  data,
+  nround = 300,
+  nfold = 5,
+  early.stop.round = 50
+) {
+  #
+  # Perform cross-validation to choose number of rounds
+  param <- list(silent = 1, objective = 'binary:logistic')
+  message('Cross-validating')
+  cv.time <- system.time(
+    cvresult <- xgb.cv(
+      params = param,
+      data = data,
+      nround = nround,
+      nfold = nfold,
+      early.stop.round = early.stop.round,
+      maximize = TRUE,
+      eval_metric = 'map'))
+  print(fit.time)
+  nround.best <- which.max(cvresult$test.map.mean)
+  message('CV best number of rounds: ', nround.best)
+  #
+  # Fit the boosted tree
+  message('Fitting')
+  fit.time <- system.time(
+    fit <- xgboost(
+      data = data,
+      params = param,
+      nround = nround.best,
+      eval_metric = 'map'))
+  print(fit.time)
+  fit
+}
+
+
+#
+# Fit model
+#
+if ('xgboost' == method) {
+  #
+  # Fit with xgboost
+  #
+  message('Fitting model with xgboost')
+  dtrain <- xgb.DMatrix(train.feat, label = train.resp - 1)
+  fit <- xgboost.fit(data = dtrain)
+  xgb.save(fit, fit.path)
+} else if ('glmnet' == method) {
+  #
+  # Fit a logistic regression
+  #
+  message('Fitting model with glmnet')
+  system.time(cvfit <- cv.glmnet(train.feat, train.resp, family = 'binomial'))
+  summary(cvfit)
+  # plot(cvfit)
+  coef(cvfit, s = "lambda.min")
+  # Save fit
+  message('Saving fit: ', fit.path)
+  saveRDS(cvfit, fit.path)
+}
 rm(train.feat)  # No longer needed
-summary(cvfit)
-# plot(cvfit)
-cvfit$lambda.min
-cvfit$lambda.1se
-coef(cvfit, s = "lambda.min")
-coef(cvfit, s = "lambda.1se")
-# Save fit
-message('Saving fit: ', fit.path)
-saveRDS(cvfit, fit.path)
 
 
 #
@@ -238,13 +312,21 @@ saveRDS(cvfit, fit.path)
 message('Creating validation data')
 valid.feat <- load.cell.data(cell.valid, .use.zero.dnase = TRUE, .sample.prop = 1, .remove.ambiguous = FALSE)$features
 message('Validation data size : ', object.size(valid.feat))
+message('# validation regions : ', nrow(valid.feat))
 
 
 #
 # Make predictions on validation data
 #
-lambda.predict <- "lambda.min"
-system.time(predictions <- predict(cvfit, valid.feat, s = lambda.predict)[,1])
+message('Making predictions')
+if ('xgboost' == method) {
+  class(fit)
+  # system.time(predictions <- predict(fit, valid.feat))
+  # system.time(predictions <- predict(fit, as.matrix(valid.feat[1:10000,])))
+  system.time(predictions <- predict(fit, as.matrix(valid.feat)))
+} else if ('glmnet' == method) {
+  system.time(predictions <- logit.inv(predict(cvfit, valid.feat, s = "lambda.min")[,1]))
+}
 rm(valid.feat)  # No longer needed
 
 
@@ -260,7 +342,7 @@ out <-
     chrom = Rle(factor(runValue(chrom), levels = misordered.levels), runLength(chrom)),
     start = start,
     end   = start + 200,
-    pred  = logit.inv(predictions))
+    pred  = predictions)
 rm(predictions)  # No longer needed
 rm(start)  # No longer needed
 # Add true binding values to data frame if we know them
