@@ -11,7 +11,7 @@
 #SBATCH -A MRC-BSU-SL2                  # Which project should be charged
 #SBATCH --nodes=1                       # How many whole nodes should be allocated?
 #SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
-#SBATCH --mem=30720                     # How many MB each node is allocated
+#SBATCH --mem=61440                     # How many MB each node is allocated
 #SBATCH --time=12:00:00                 # How much wallclock time will be required?
 #SBATCH -o predict-%j.out               # stdout
 #SBATCH -e predict-%j.out               # stderr
