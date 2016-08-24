@@ -19,7 +19,7 @@
 #SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
 ##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
                                         # interrupted by node failure or system downtime):
-Sys.setenv(OMP_NUM_THREADS=16)          # Set OpenMP number of threads
+# Sys.setenv(OMP_NUM_THREADS=16)          # Set OpenMP number of threads
 "Usage:
 predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 
@@ -50,7 +50,7 @@ library(Saturn)
 # .args <- "--motif=Known GATA3 A549"
 # .args <- "-f DNase -f KnownMotifs -s .01 GABPA SK-N-SH"
 # .args <- "-f DNase -f DREMEWell ATF2 GM12878"
-# .args <- "--method=xgboost -f DNase -f DREMEWell ATF2 GM12878"
+# .args <- "--method=xgboost --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 message('Arguments: ', .args)
@@ -257,16 +257,17 @@ xgboost.fit <- function(
   param <- list(silent = 1, objective = 'binary:logistic')
   message('Cross-validating')
   cv.time <- system.time(
-    cvresult <- xgb.cv(
+    cv.result <- xgb.cv(
       params = param,
       data = data,
       nround = nround,
       nfold = nfold,
       early_stopping_rounds = early.stop.round,
       maximize = TRUE,
-      eval_metric = 'map'))
+      metrics = list('map')))
   print(cv.time)
-  nround.best <- which.max(cvresult$test.map.mean)
+  cv.result
+  nround.best <- cv.result$best_ntreelimit
   message('CV best number of rounds: ', nround.best)
   if (nround.best == nround) {
     message('WARNING: Potential underfitting: CV best round is last round: ', nround.best)
@@ -294,7 +295,7 @@ if ('xgboost' == method) {
   #
   message('Fitting model with xgboost')
   dtrain <- xgb.DMatrix(train.feat, label = train.resp - 1)
-  fit <- xgboost.fit(data = dtrain)
+  fit <- xgboost.fit(data = dtrain, nround = max.boost.rounds)
   xgb.save(fit, fit.path)
 } else if ('glmnet' == method) {
   #
@@ -321,13 +322,23 @@ message('Validation data size : ', object.size(valid.feat))
 message('# validation regions : ', nrow(valid.feat))
 
 
+#'
+#' Create a xgb.DMatrix from a dgCMatrix working around bug in xgboost where zero rows at end
+#' of dgCMatrix are ignored.
+#'
+DMatrix.from.dgC <- function(dgC) {
+  if (0 == dgC[nrow(dgC), 1]) {
+    dgC[nrow(dgC), 1] <- .Machine$double.eps
+  }
+  xgb.DMatrix(dgC)
+}
+
 #
 # Make predictions on validation data
 #
 message('Making predictions')
 if ('xgboost' == method) {
-  class(fit)
-  system.time(predictions <- predict(fit, valid.feat))
+  system.time(predictions <- predict(fit, DMatrix.from.dgC(valid.feat)))
   # system.time(predictions <- predict(fit, as.matrix(valid.feat[1:10000,])))
   # system.time(predictions <- predict(fit, as.matrix(valid.feat)))
   stopifnot(length(predictions) == sum(regions.for.cell(cell.valid)))
