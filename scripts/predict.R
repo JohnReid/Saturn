@@ -10,14 +10,16 @@
 #SBATCH -J PREDICT                      # Name of the job
 #SBATCH -A MRC-BSU-SL2                  # Which project should be charged
 #SBATCH --nodes=1                       # How many whole nodes should be allocated?
-#SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --ntasks=1                      # How many tasks will there be in total? (<= nodes*16)
+#SBATCH --cpus-per-task=16              # How many CPUs per task
 #SBATCH --mem=61440                     # How many MB each node is allocated
 #SBATCH --time=12:00:00                 # How much wallclock time will be required?
-#SBATCH -o predict-%j.out               # stdout
-#SBATCH -e predict-%j.out               # stderr
+#SBATCH -o predict/predict-%j.out       # stdout
+#SBATCH -e predict/predict-%j.out       # stderr
 #SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
 ##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
                                         # interrupted by node failure or system downtime):
+Sys.setenv(OMP_NUM_THREADS=16)          # Set OpenMP number of threads
 "Usage:
 predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 
@@ -51,6 +53,7 @@ library(Saturn)
 # .args <- "--method=xgboost -f DNase -f DREMEWell ATF2 GM12878"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
+message('Arguments: ', .args)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
 tf <- factor(opts$TF, tf.levels)
@@ -259,12 +262,15 @@ xgboost.fit <- function(
       data = data,
       nround = nround,
       nfold = nfold,
-      early.stop.round = early.stop.round,
+      early_stopping_rounds = early.stop.round,
       maximize = TRUE,
       eval_metric = 'map'))
-  print(fit.time)
+  print(cv.time)
   nround.best <- which.max(cvresult$test.map.mean)
   message('CV best number of rounds: ', nround.best)
+  if (nround.best == nround) {
+    message('WARNING: Potential underfitting: CV best round is last round: ', nround.best)
+  }
   #
   # Fit the boosted tree
   message('Fitting')
@@ -321,9 +327,10 @@ message('# validation regions : ', nrow(valid.feat))
 message('Making predictions')
 if ('xgboost' == method) {
   class(fit)
-  # system.time(predictions <- predict(fit, valid.feat))
+  system.time(predictions <- predict(fit, valid.feat))
   # system.time(predictions <- predict(fit, as.matrix(valid.feat[1:10000,])))
-  system.time(predictions <- predict(fit, as.matrix(valid.feat)))
+  # system.time(predictions <- predict(fit, as.matrix(valid.feat)))
+  stopifnot(length(predictions) == sum(regions.for.cell(cell.valid)))
 } else if ('glmnet' == method) {
   system.time(predictions <- logit.inv(predict(cvfit, valid.feat, s = "lambda.min")[,1]))
 }
