@@ -6,7 +6,7 @@
 
 
 #
-# Load libraries
+# Load packages
 #
 library(docopt)
 library(data.table)

@@ -38,7 +38,8 @@ options(warn = 2)
 
 
 #
-# Load libraries
+# Load packages
+#
 devtools::load_all()
 library(Saturn)
 
