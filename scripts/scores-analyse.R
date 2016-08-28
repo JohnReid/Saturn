@@ -9,7 +9,7 @@ options(warn = 2)
 
 
 #
-# Load libraries
+# Load packages
 #
 devtools::load_all()
 library(ggplot2)
@@ -19,7 +19,29 @@ library(stringr)
 
 #' Parse TF and cell from filename
 #'
-parse.filename <- function(file.name) str_split_fixed(basename(file.name), fixed('.'), 5)[,2:4]
+# parse.filename <- function(file.name) str_split_fixed(basename(file.name), fixed('.'), 5)[,2:4]
+# Some old filenames didn't include the method (glmnet) so parse these differently
+parse.filename <- function(file.name) {
+  split <- str_split(basename(file.name), fixed('.'))
+  .list <- lapply(
+    split,
+    function(s) {
+      if (6 == length(s)) {
+        c(s[[3]], s[[4]], s[[5]], s[[2]])
+      } else {
+        c(s[[2]], s[[3]], s[[4]], 'glmnet')
+      }
+    })
+  do.call(rbind, .list)
+}
+
+
+
+#
+# Functions
+#
+plots.filename <- function(plot.name) file.path(plots.dir, str_c(plots.tag, '-', plot.name, '.pdf'))
+save.plot <- function(plot.name) ggsave(plots.filename(plot.name), width = 18, height = 12, units = 'in')
 
 
 #
@@ -32,9 +54,6 @@ scorestsv <- opts$SCORESTSV
 plots.dir <- '../Plots'
 plots.tag <- 'scores'
 
-plots.filename <- function(plot.name) file.path(plots.dir, str_c(plots.tag, '-', plot.name, '.pdf'))
-save.plot <- function(plot.name) ggsave(plots.filename(plot.name), width = 18, height = 12, units = 'in')
-
 
 #
 # Load scores
@@ -45,6 +64,7 @@ parsed <- parse.filename(scores$file)
 scores$TF <- factor(parsed[,1], levels = tf.levels)
 scores$cell <- factor(parsed[,2], levels = cell.levels)
 scores$motif.tags <- factor(stringr::str_replace(parsed[,3], 'DREME-.*', 'DREME'))
+scores$method <- factor(parsed[,4])
 sapply(scores, class)
 
 
@@ -62,13 +82,13 @@ scores.filtered <- scores %>% left_join(num.preds) %>% filter(most.preds == num.
 # Plot scores
 #
 # AUROC vs. AUPRC
-ggplot(scores, aes(x = AUROC, y = AUPRC, label = TF, colour = motif.tags)) +
+ggplot(scores, aes(x = AUROC, y = AUPRC, label = TF, colour = interaction(motif.tags, method))) +
   geom_label() +
   scale_colour_few() +
   theme_few()
 save.plot('AUROC-AUPRC')
 # AUPRC by TF
-ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, colour = motif.tags)) +
+ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, colour = interaction(motif.tags, method))) +
   geom_boxplot() +
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
@@ -76,7 +96,7 @@ ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, col
   theme_few()
 save.plot('AUPRC-by-TF')
 # AUPRC by cell
-ggplot(scores.filtered, aes(x = reorder(cell, AUPRC, FUN = median), y = AUPRC, colour = motif.tags)) +
+ggplot(scores.filtered, aes(x = reorder(cell, AUPRC, FUN = median), y = AUPRC, colour = interaction(motif.tags, method))) +
   geom_boxplot() +
   # geom_jitter(height = 0) +
   labs(x = 'cell') +
@@ -84,7 +104,7 @@ ggplot(scores.filtered, aes(x = reorder(cell, AUPRC, FUN = median), y = AUPRC, c
   theme_few()
 save.plot('AUPRC-by-cell')
 # recall at 10% FDR by TF
-ggplot(scores.filtered, aes(x = reorder(TF, recall_10, FUN = median), y = recall_10, colour = motif.tags)) +
+ggplot(scores.filtered, aes(x = reorder(TF, recall_10, FUN = median), y = recall_10, colour = interaction(motif.tags, method))) +
   geom_boxplot() +
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
@@ -92,7 +112,7 @@ ggplot(scores.filtered, aes(x = reorder(TF, recall_10, FUN = median), y = recall
   theme_few()
 save.plot('recall-10-by-TF')
 # recall at 50% FDR by TF
-ggplot(scores.filtered, aes(x = reorder(TF, recall_50, FUN = median), y = recall_50, colour = motif.tags)) +
+ggplot(scores.filtered, aes(x = reorder(TF, recall_50, FUN = median), y = recall_50, colour = interaction(motif.tags, method))) +
   geom_boxplot() +
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
