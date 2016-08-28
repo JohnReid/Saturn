@@ -1,13 +1,30 @@
 We list some possible prediction methods in rough order of perceived utility.
 
+# Handle 0 DNase
+
+How to handle zero DNase levels? Currently we build model from regions with DNase then
+extrapolate to regions with 0.
+
+
 # Ensemble methods
 
 ## Boosting
 
+Boost glmnet with xgboost?
+
+
 ## Bagging
 
 
+## Smoothing
+
+Smooth predictions? Strong neighbouring predictions could indicate increased
+binding likelihood.
+
+
 # Logistic regression
+
+glmnet
 
 
 # Neural networks
