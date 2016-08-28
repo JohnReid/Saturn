@@ -25,6 +25,7 @@ predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 
 Options:
   --method=METHOD        Use METHOD [default: glmnet]
+  --tag=TAG              Add TAG to results name. [default: '']
   -f --features=NAME     Use NAME features
   --use-zero-dnase       Fit regions with zero DNase levels [default: FALSE]
   --max-boosting=MAXIMUM MAXIMUM number of boost rounds for xgboost method [default: 300]
@@ -47,11 +48,11 @@ library(Saturn)
 #
 # Parse options
 #
-# .args <- "--motif=Known ARID3A K562"
-# .args <- "--motif=Known GATA3 A549"
-# .args <- "-f DNase -f KnownMotifs -s .01 GABPA SK-N-SH"
-# .args <- "-f DNase -f DREMEWell ATF2 GM12878"
-# .args <- "--method=xgboost --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
+# .args <- "--tag=test --motif=Known ARID3A K562"
+# .args <- "--tag=test --motif=Known GATA3 A549"
+# .args <- "--tag=test -f DNase -f KnownMotifs -s .01 GABPA SK-N-SH"
+# .args <- "--tag=test -f DNase -f DREMEWell ATF2 GM12878"
+# .args <- "--tag=test --method=xgboost --sample=.1 --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 message('Arguments: ', .args)
@@ -62,6 +63,7 @@ if (is.na(tf)) stop('Unknown TF specified.')
 cell.valid <- factor(opts$VALIDATIONCELL, levels = cell.levels)
 if (is.na(cell.valid)) stop('Unknown validation cell specified.')
 method <- opts$method
+tag <- opts$tag
 feat.names <- opts$features
 sample.prop <- as.numeric(opts$sample)
 max.boost.rounds <- as.integer(opts[['max-boosting']])
@@ -78,7 +80,7 @@ message('Use zero DNase: ', toString(use.zero.dnase))
 # Construct output filenames
 #
 feat.tags <- do.call(stringr::str_c, c(feat.names, list(sep = "_")))
-fit.id <- stringr::str_c(method, '.', as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
+fit.id <- stringr::str_c(method, '.', tag, '.', as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
 predictions.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('predictions.', fit.id, '.tsv'))
 
 
@@ -239,6 +241,8 @@ message('Creating training data')
 train.data <- lapply(cell.train, load.cell.data)
 train.feat <- do.call(rbind, lapply(train.data, function(d) d$features))
 train.resp <- do.call(c,     lapply(train.data, function(d) d$response))
+train.cell.nrows <- lapply(train.data, function(x) nrow(x$features))
+rm(train.data)  # No longer needed
 message('Training matrix size: ', object.size(train.feat))
 message('# regions : ', nrow(train.feat))
 message('# features: ', ncol(train.feat))
@@ -251,7 +255,8 @@ xgboost.fit <- function(
   data,
   nround = 300,
   nfold = 5,
-  early.stop.round = 50
+  early.stop.round = 50,
+  folds = NULL
 ) {
   #
   # Perform cross-validation to choose number of rounds
@@ -263,6 +268,7 @@ xgboost.fit <- function(
       data = data,
       nround = nround,
       nfold = nfold,
+      folds = folds,
       early_stopping_rounds = early.stop.round,
       maximize = TRUE,
       metrics = list('map')))
@@ -292,11 +298,29 @@ xgboost.fit <- function(
 #
 if ('xgboost' == method) {
   #
+  # Decide on CV folds
+  #
+  if (length(train.cell.nrows) > 1) {
+    #
+    # we have enough cells to use CV across cell types
+    last.idx <- as.integer(0)
+    folds <- list()
+    for (.nrow in train.cell.nrows) {
+      new.last.idx <- last.idx + .nrow
+      folds <- c(folds, (last.idx+1):new.last.idx)
+      last.idx <- new.last.idx
+    }
+  } else {
+    #
+    # just let xgb.cv use randomly chosen folds
+    folds <- NULL
+  }
+  #
   # Fit with xgboost
   #
   message('Fitting model with xgboost')
   dtrain <- xgb.DMatrix(train.feat, label = train.resp - 1)
-  fit <- xgboost.fit(data = dtrain, nround = max.boost.rounds)
+  fit <- xgboost.fit(data = dtrain, nround = max.boost.rounds, folds = folds)
   xgb.save(fit, fit.path)
 } else if ('glmnet' == method) {
   #
