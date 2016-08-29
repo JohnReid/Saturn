@@ -10,9 +10,16 @@
 options(warn = 2)
 
 
+#
+# Load packages
+#
 devtools::load_all()
 library(Saturn)
 
+
+#
+# For each cell type
+#
 for (cell in levels(cells$cell)) {
   if ("" != cell) {
     message(cell)

@@ -1,22 +1,22 @@
 #!/usr/bin/env Rscript
 #
-# Make features from motif scan
+# Make features from DNAshape bigwig files
 #
 #!
 #! sbatch directives begin here ###############################
 #!
 #SBATCH -p mrc-bsu-sand                 # Partition
-#SBATCH -J FEATSCAN                     # Name of the job
+#SBATCH -J FEATSHAPE                    # Name of the job
 #SBATCH -A MRC-BSU-SL2                  # Which project should be charged
 #SBATCH --nodes=1                       # How many whole nodes should be allocated?
 #SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
 #SBATCH --mem=15360                     # How many MB each node is allocated
 #SBATCH --time=06:00:00                 # How much wallclock time will be required?
-#SBATCH -o feat-scan-%j.out             # stdout
-#SBATCH -e feat-scan-%j.out             # stderr
+#SBATCH -o feat-shape/feat-shape-%j.out # stdout
+#SBATCH -e feat-shape/feat-shape-%j.out # stderr
 #SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
 ##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
-"Usage: feature-scan.R [--tf=TF] [--cell=CELL]... [--wellington] SCANDIR SCANTAG" -> doc
+"Usage: feature-shape.R [--wellington] FEATURE BIGWIG..." -> doc
 
 
 #
@@ -30,49 +30,48 @@ options(warn = 2)
 #
 devtools::load_all()
 library(Saturn)
+library(stringr)
+library(rtracklayer)
 
 
 #
 # Parse options
 #
-# .args <- "--cell=A549 --wellington /home/john/Dev/DREAM-ENCODE/Data/Motifs/Known/ KnownMotifs"
-# .args <- "--cell=H1-hESC --tf=TEAD4 --wellington ..//Data/Motifs/DREME-TEAD4/genome-scan DREME"
+# .args <- "--wellington DNASE ../Data/DNASE/fold_coverage_wiggles/DNASE.SK-N-SH.fc.signal.bigwig"
 if (! exists(".args")) .args <- commandArgs(TRUE)
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
-scan.dir <- opts[['SCANDIR']]
-scan.tag <- opts[['SCANTAG']]
-cells <- opts$cell
-tf <- opts$tf
+feature <- opts[['FEATURE']]
+bigwig.file.paths <- opts[['BIGWIG']]
 wellington <- opts$wellington
 
 
 #
 # Set up
 #
-message('Scan directory: ', scan.dir)
-stopifnot(file.exists(scan.dir))
-if (wellington && ! length(cells)) {
-  stop('No cells specified for Wellington footprints.')
+for (big.file.path in bigwig.file.paths) {
+  message('BigWig file: ', bigwig.file.path)
+  stopifnot(file.exists(bigwig.file.path))
 }
 
 
-#' Cached function to load motifs
+#' Cached function to load bigwig
 #'
-get.scan <- memoise::memoise(function() load.motif.dir(scan.dir))
+bw.file <- memoise::memoise(function(bigwig.file.path) BigWigFile(bigwig.file.path))
 
 
-#' Generate feature for each motif
+#' Generate feature for each set of ranges
 #'
-calc.feature <- function(hits.gr) {
-  overlaps <- as.data.frame(findOverlaps(ranges.test(), hits.gr, ignore.strand = TRUE))
+ranges.test.pp <- GNCList(ranges.test())
+calc.feature <- function(hits.gr, score.name = 'score') {
+  overlaps <- as.data.frame(findOverlaps(ranges.test.pp, hits.gr, ignore.strand = TRUE))
   if (! nrow(overlaps)) {
-    Rle(0, length(ranges.test()))
+    Rle(0, length(ranges.test.pp))
   } else {
-    overlaps$value <- mcols(hits.gr[overlaps$subjectHits])$logBF
+    overlaps$value <- mcols(hits.gr[overlaps$subjectHits])[[score.name]]
     with(
       aggregate(overlaps %>% select(-subjectHits), list(overlaps$queryHits), max),
-      Rle.from.sparse(length(ranges.test()), queryHits, value))
+      Rle.from.sparse(length(ranges.test.pp), queryHits, value))
   }
 }
 
@@ -85,12 +84,12 @@ subsetByFootprints <- function(gr, cell) {
 }
 
 
-#' Save features as DataFrame
+#' Save features as sparse Matrix
 #'
 save.features <- function(features, features.file.name) {
   message('Saving features: ', features.file.name)
   dir.create(dirname(features.file.name), showWarnings = FALSE)
-  saveRDS(do.call(S4Vectors::DataFrame, features), features.file.name)
+  saveRDS(as(do.call(S4Vectors::DataFrame, features), features.file.name, "Matrix"))
 }
 
 
@@ -103,7 +102,7 @@ if (wellington) {
     #
     # If a TF is specified name the feature file with it
     #
-    well.tag <- stringr::str_c(scan.tag, 'Well')
+    well.tag <- str_c(scan.tag, 'Well')
     if (is.null(tf)) {
       features.file.name <- feature.cell.file.name(well.tag, cell)
     } else {
@@ -119,7 +118,7 @@ if (wellington) {
         lapply(
           lapply(get.scan(), functional::Curry(subsetByFootprints, cell = cell)),
           calc.feature)
-      names(features) <- stringr::str_c(names(features), '.Well')
+      names(features) <- str_c(names(features), '.Well')
       save.features(features, features.file.name)
     }
   }
@@ -127,20 +126,42 @@ if (wellington) {
 
 
 #
-# If a TF is specified name the feature file with it
+# Feature name from file name
 #
-if (is.null(tf)) {
-  features.file.name <- feature.file.name(scan.tag)
-} else {
-  features.file.name <- feature.tf.file.name(scan.tag, tf)
+feature.from.file <- function(file.name) {
+  basename(file.name) %>%
+    str_replace(regex('.bw$'    , ignore_case = TRUE), '') %>%
+    str_replace(regex('.bigwig$', ignore_case = TRUE), '') %>%
+    str_replace(regex('.wig$'   , ignore_case = TRUE), '')
 }
+
+
+#
+# Get features for a BigWig file
+#
+calc.features <- function(bw, type = 'max') {
+  unlist(summary(bw, ranges.test.pp, type = type))
+}
+bw <- BigWigFile(bigwig.file)
+gr <- ranges.test()[sample(length(ranges.test()), 10)]
+feat <- unlist(summary(bw, gr, type = c('max')))
+system.time(unlist(summary(bw, ranges.test.pp, type = c('max'))))
+
+
+#
+# Get the name of the feature file
+#
+features.file.name <- feature.file.name(feature)
 if (file.exists(features.file.name)) {
   message('Features already exist, not recreating: ', features.file.name)
 } else {
   #
   # Calculate and save features
   message('Calculating features without footprints')
-  features <- lapply(get.scan(), calc.feature)
-  save.features(features, features.file.name)
+  subsample <- function(gr) gr[sample(length(gr), 100000)]
+  subsample(bw)
+  length(bw)
+  system.time(features <- lapply(lapply(lapply(bigwig, get.bw), subsample), calc.feature))
+  # save.features(features, features.file.name)
 }
 message('Done')
