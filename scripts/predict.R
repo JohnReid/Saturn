@@ -13,7 +13,7 @@
 #SBATCH --ntasks=1                      # How many tasks will there be in total? (<= nodes*16)
 #SBATCH --cpus-per-task=16              # How many CPUs per task
 #SBATCH --mem=61440                     # How many MB each node is allocated
-#SBATCH --time=12:00:00                 # How much wallclock time will be required?
+#SBATCH --time=24:00:00                 # How much wallclock time will be required?
 #SBATCH -o predict/predict-%j.out       # stdout
 #SBATCH -e predict/predict-%j.out       # stderr
 #SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
@@ -80,6 +80,7 @@ message('Use zero DNase: ', toString(use.zero.dnase))
 #
 feat.tags <- do.call(stringr::str_c, c(feat.names, list(sep = "_")))
 fit.id <- stringr::str_c(method, '.', tag, '.', as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
+message('Fit ID: ', fit.id)
 predictions.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('predictions.', fit.id, '.tsv'))
 
 
@@ -303,15 +304,18 @@ if ('xgboost' == method) {
     #
     # we have enough cells to use CV across cell types
     last.idx <- as.integer(0)
-    folds <- list()
-    for (.nrow in train.cell.nrows) {
-      new.last.idx <- last.idx + .nrow
-      folds <- c(folds, (last.idx+1):new.last.idx)
+    folds <- vector('list', length(train.cell.nrows))
+    for (i in seq_along(train.cell.nrows)) {
+      new.last.idx <- last.idx + train.cell.nrows[[i]]
+      folds[[i]] <- (last.idx+1):new.last.idx
       last.idx <- new.last.idx
     }
+    message('Choosing CV folds across cell types:')
+    print(train.cell.nrows)
   } else {
     #
     # just let xgb.cv use randomly chosen folds
+    message('Using randomly chosen CV folds.')
     folds <- NULL
   }
   #
