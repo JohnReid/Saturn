@@ -1,0 +1,130 @@
+---
+title: "Analyse the expression data"
+author: John Reid
+output: pdf_document
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('expression.Rmd')
+```
+
+```{r params, echo = FALSE}
+library(Saturn)
+knitr::opts_chunk$set(fig.width = 18, fig.height = 12)
+```
+
+Parameters:
+```{r parameters}
+expr.var <- 'log.TPM'
+num.expr.clusters <- 40
+```
+
+
+# Load data
+
+Load expression data.
+```{r loadExpr, message = FALSE}
+expr <-
+    cells %>%
+    group_by(cell) %>%
+    do(load.avg.expr(.$cell)) %>%
+    ungroup()
+```
+
+Cast as matrix.
+```{r castExpr}
+expr.mat <-
+    expr %>%
+    acast(ensembl_gene_id ~ cell, value.var = expr.var)
+dim(expr.mat)
+```
+
+
+# Select genes
+
+Get Ensembl IDs for genes of interest.
+```{r genesInterest}
+library(Homo.sapiens)
+ensembl.ids.of.interest <-
+    select(
+        Homo.sapiens,
+        keys = tf.levels,
+        column = 'ENSEMBL',
+        keytype = 'SYMBOL',
+        multiVals = 'asNA') %>%
+    filter(ENSEMBL != 'ENSG00000122728')
+```
+
+Plot heatmap of genes of interest.
+```{r heatmapInterest}
+library(gplots)
+library(RColorBrewer)
+hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
+hm <- heatmap.2(
+    expr.mat[ensembl.ids.of.interest$ENSEMBL,],
+    labRow = ensembl.ids.of.interest$SYMBOL,
+    col = hmcol,
+    trace = 'none')
+```
+
+
+# Heatmap
+
+Pick genes with highest variances.
+```{r highVar}
+vars <- apply(expr.mat, 1, var)
+gene.idxs <- order(-vars)[1:2000]
+```
+
+Make a heatmap of high variance genes.
+```{r heatmap}
+hm <- heatmap.2(
+    expr.mat[gene.idxs,],
+    col = hmcol,
+    labRow = '',
+    trace = 'none')
+```
+
+
+# Clustering
+
+Extract hierarchical clustering from heatmap.
+```{r hierClus}
+hc.genes <- as.hclust(hm$rowDendrogram)
+cluster.ids <- cutree(hc.genes, k = num.expr.clusters)
+expr.clusters <- data.frame(
+    ensembl_gene_id = factor(names(clusters), levels = levels(expr$ensembl_gene_id)),
+    cluster_id = cluster.ids)
+rownames(expr.clusters) <- NULL
+```
+
+Summarise cluster expression in each cell.
+```{r cellCluster}
+expr.cell.cluster <-
+    expr %>%
+    inner_join(expr.clusters) %>%
+    group_by(cell, cluster_id) %>%
+    summarise(log.TPM = mean(log.TPM))
+```
+
+
+# Save data
+
+```{r saveData}
+devtools::use_data(expr.clusters, overwrite = TRUE)
+devtools::use_data(expr.cell.cluster, overwrite = TRUE)
+devtools::use_data(ensembl.ids.of.interest, overwrite = TRUE)
+```
+
+
+# Session information
+
+`r date()` on `r Sys.info()[["nodename"]]`
+```{r sessionInfo}
+devtools::session_info()
+largest.objects()
+```
