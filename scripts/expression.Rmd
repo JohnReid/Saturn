@@ -97,7 +97,7 @@ Extract hierarchical clustering from heatmap.
 hc.genes <- as.hclust(hm$rowDendrogram)
 cluster.ids <- cutree(hc.genes, k = num.expr.clusters)
 expr.clusters <- data.frame(
-    ensembl_gene_id = factor(names(clusters), levels = levels(expr$ensembl_gene_id)),
+    ensembl_gene_id = factor(names(cluster.ids), levels = levels(expr$ensembl_gene_id)),
     cluster_id = cluster.ids)
 rownames(expr.clusters) <- NULL
 ```
