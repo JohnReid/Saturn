@@ -29,6 +29,7 @@ Options:
   -f --features=NAME     Use NAME features
   --use-zero-dnase       Fit regions with zero DNase levels [default: FALSE]
   --max-boosting=MAXIMUM MAXIMUM number of boost rounds for xgboost method [default: 300]
+  --expr                 Use expression summary [default: FALSE]
   -s --sample=PROP       Subsample training regions to with proportion PROP [default: 1]" -> doc
 
 
@@ -50,7 +51,7 @@ library(Saturn)
 #
 # .args <- "--tag=test --motif=Known ARID3A K562"
 # .args <- "--tag=test --motif=Known GATA3 A549"
-# .args <- "--tag=test -f DNase -f KnownMotifs -s .01 GABPA SK-N-SH"
+# .args <- "--tag=test -f DNase -f KnownMotifs -s .01 --expr GABPA SK-N-SH"
 # .args <- "--tag=test -f DNase -f DREMEWell ATF2 GM12878"
 # .args <- "--tag=test --method=xgboost --sample=.1 --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
 # Use dummy arguments if they exist otherwise use command line arguments
@@ -68,18 +69,21 @@ feat.names <- opts$features
 sample.prop <- as.numeric(opts$sample)
 max.boost.rounds <- as.integer(opts[['max-boosting']])
 use.zero.dnase <- as.logical(opts[['use-zero-dnase']])
+use.expr <- as.logical(opts[['expr']])
 message('Features: ', toString(feat.names))
 if (! 'DNase' %in% feat.names) {
   message('WARNING: No DNase feature included in arguments!!!')
 }
 message('Sample proportion: ', toString(sample.prop))
 message('Use zero DNase: ', toString(use.zero.dnase))
+message('Use expression: ', toString(use.expr))
 
 
 #
 # Construct output filenames
 #
 feat.tags <- do.call(stringr::str_c, c(feat.names, list(sep = "_")))
+if (use.expr) feat.tags <- stringr::str_c(feat.tags, '_expr')
 fit.id <- stringr::str_c(method, '.', tag, '.', as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
 predictions.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('predictions.', fit.id, '.tsv'))
 
@@ -195,7 +199,8 @@ load.cell.data <- function(
   cell,
   .use.zero.dnase = FALSE,
   .sample.prop = sample.prop,
-  .remove.ambiguous = TRUE)
+  .remove.ambiguous = TRUE,
+  .use.expr = use.expr)
 {
   #
   # Get the binding status
@@ -231,6 +236,14 @@ load.cell.data <- function(
     .sample <- sample.int(nrow(mat), size = as.integer(.sample.prop * nrow(mat)))
     mat <- mat[.sample,]
     response <- response[.sample]
+  }
+  #
+  # Add expression data if requested
+  if (.use.expr) {
+    cell.expr <- expr.features.for.cell(cell)
+    mat <- cbind(
+      mat,
+      t(matrix(rep(cell.expr, nrow(mat)), ncol = nrow(mat))))
   }
   message(cell, ': Has ', nrow(mat), ' regions')
   list(
