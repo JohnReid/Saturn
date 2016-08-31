@@ -17,7 +17,9 @@ library(Saturn)
 knitr::opts_chunk$set(fig.width = 18, fig.height = 12)
 ```
 
-Parameters:
+
+# Parameters
+
 ```{r parameters}
 expr.var <- 'log.TPM'
 num.expr.clusters <- 40
@@ -29,7 +31,7 @@ num.expr.clusters <- 40
 Load expression data.
 ```{r loadExpr, message = FALSE}
 expr <-
-    cells %>%
+    data.frame(cell = factor(cell.levels, levels = cell.levels))  %>%
     group_by(cell) %>%
     do(load.avg.expr(.$cell)) %>%
     ungroup()
@@ -47,7 +49,7 @@ dim(expr.mat)
 # Select genes
 
 Get Ensembl IDs for genes of interest.
-```{r genesInterest}
+```{r genesInterest, message = FALSE}
 library(Homo.sapiens)
 ensembl.ids.of.interest <-
     select(
@@ -57,15 +59,16 @@ ensembl.ids.of.interest <-
         keytype = 'SYMBOL',
         multiVals = 'asNA') %>%
     filter(ENSEMBL != 'ENSG00000122728')
+expr.of.interest <- expr.mat[ensembl.ids.of.interest$ENSEMBL,]
 ```
 
 Plot heatmap of genes of interest.
-```{r heatmapInterest}
+```{r heatmapInterest, message = FALSE}
 library(gplots)
 library(RColorBrewer)
 hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
 hm <- heatmap.2(
-    expr.mat[ensembl.ids.of.interest$ENSEMBL,],
+    expr.of.interest,
     labRow = ensembl.ids.of.interest$SYMBOL,
     col = hmcol,
     trace = 'none')
@@ -112,12 +115,11 @@ expr.cell.cluster <-
 ```
 
 
-# Save data
-
-```{r saveData}
+```{r saveData, eval = FALSE, message = FALSE, echo = FALSE}
 devtools::use_data(expr.clusters, overwrite = TRUE)
 devtools::use_data(expr.cell.cluster, overwrite = TRUE)
 devtools::use_data(ensembl.ids.of.interest, overwrite = TRUE)
+devtools::use_data(expr.of.interest, overwrite = TRUE)
 ```
 
 
