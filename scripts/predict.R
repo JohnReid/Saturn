@@ -27,9 +27,10 @@ Options:
   --method=METHOD        Use METHOD [default: glmnet]
   --tag=TAG              Add TAG to results name. [default: '']
   -f --features=NAME     Use NAME features
-  --use-zero-dnase       Fit regions with zero DNase levels [default: FALSE]
   --max-boosting=MAXIMUM MAXIMUM number of boost rounds for xgboost method [default: 300]
   --expr                 Use expression summary [default: FALSE]
+  -r --remove-zero-dnase Don't use regions with zero DNase levels [default: FALSE]
+  -d --down-sample       Down-sample training regions (stratified by DNase) [default: False]
   -s --sample=PROP       Subsample training regions to with proportion PROP [default: 1]" -> doc
 
 
@@ -52,7 +53,7 @@ library(Saturn)
 # .args <- "--tag=test --motif=Known ARID3A K562"
 # .args <- "--tag=test --motif=Known GATA3 A549"
 # .args <- "--tag=test -f DNase -f KnownMotifs -s .01 --expr GABPA SK-N-SH"
-# .args <- "--tag=test -f DNase -f DREMEWell ATF2 GM12878"
+# .args <- "--tag=test --method=xgboost -f DNase -f DREMEWell --expr -s .01 ATF2 GM12878"
 # .args <- "--tag=test --method=xgboost --sample=.1 --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
@@ -68,14 +69,16 @@ tag <- opts$tag
 feat.names <- opts$features
 sample.prop <- as.numeric(opts$sample)
 max.boost.rounds <- as.integer(opts[['max-boosting']])
-use.zero.dnase <- as.logical(opts[['use-zero-dnase']])
+remove.zero.dnase <- as.logical(opts[['remove-zero-dnase']])
+down.sample <- as.logical(opts[['down-sample']])
 use.expr <- as.logical(opts[['expr']])
 message('Features: ', toString(feat.names))
 if (! 'DNase' %in% feat.names) {
   message('WARNING: No DNase feature included in arguments!!!')
 }
 message('Sample proportion: ', toString(sample.prop))
-message('Use zero DNase: ', toString(use.zero.dnase))
+message('Down-sample: ', toString(down.sample))
+message('Remove zero DNase: ', toString(remove.zero.dnase))
 message('Use expression: ', toString(use.expr))
 
 
@@ -92,6 +95,7 @@ predictions.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('pred
 # Load prediction package
 #
 if ('xgboost' == method) {
+  # devtools::load_all(stringr::str_c(Sys.getenv('HOME'), '/src/xgboost/R-package'))
   library(xgboost)
   fit.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('fit.', fit.id, '.xgb'))
 } else if ('glmnet' == method) {
@@ -197,8 +201,9 @@ prop.bound <- function(binding) sum('B' == binding) / length(binding)
 #
 load.cell.data <- function(
   cell,
-  .use.zero.dnase = FALSE,
+  .remove.zero.dnase = remove.zero.dnase,
   .sample.prop = sample.prop,
+  .down.sample = down.sample,
   .remove.ambiguous = TRUE,
   .use.expr = use.expr)
 {
@@ -212,6 +217,7 @@ load.cell.data <- function(
     keep <- keep & ('A' != response)
   }
   response <- response[keep]
+  chrom <- regions.test$chrom[keep]
   message(cell, ': Proportion bound: ', prop.bound(response))
   #
   # Load and cbind the features
@@ -220,14 +226,56 @@ load.cell.data <- function(
       cbind,
       lapply(feat.names, function(feat.name) load.feature(feat.name, tf, cell)[as.vector(keep), , drop = FALSE]))
   #
+  # Down sample the unbound examples to match the bound examples (stratified by non-zero DNase if present)
+  if (.down.sample) {
+    if ('DNase' %in% colnames(mat)) {
+      message('Down sampling (stratified by DNase)')
+      dnase.non.zeros <- 0 != mat[,'DNase']
+      bound <- 'B' == response
+      non.zero.bound   <- which(  dnase.non.zeros &   bound)
+      zero.bound       <- which(! dnase.non.zeros &   bound)
+      non.zero.unbound <- which(  dnase.non.zeros & ! bound)
+      zero.unbound     <- which(! dnase.non.zeros & ! bound)
+      # Down sample non zero DNase regions
+      if (length(non.zero.bound) < length(non.zero.unbound)) {
+        non.zero.unbound <- sample(non.zero.unbound, length(non.zero.bound))
+      } else {
+        non.zero.bound <- sample(non.zero.bound, length(non.zero.unbound))
+      }
+      # Down sample zero DNase regions
+      if (length(zero.bound) < length(zero.unbound)) {
+        zero.unbound <- sample(zero.unbound, length(zero.bound))
+      } else {
+        zero.bound <- sample(zero.bound, length(zero.unbound))
+      }
+      down.sampled <- sort(c(non.zero.bound, non.zero.unbound, zero.bound, zero.unbound))
+    } else {
+      message('Down sampling')
+      bound <- 'B' == response
+      bound.which   <- which(  bound)
+      unbound.which <- which(! bound)
+      if (sum(bound) < sum(! unbound)) {
+        unbound.which <- sample(unbound.which, length(bound.which))
+      } else {
+        bound.which <- sample(bound.which, length(unbound.which))
+      }
+      down.sampled <- sort(c(bound.which, unbound.which))
+    }
+    mat <- mat[down.sampled,]
+    response <- response[down.sampled]
+    chrom <- chrom[down.sampled]
+    message(cell, ': Proportion bound: ', prop.bound(response))
+  }
+  #
   # Remove those with zero DNase levels if we don't want them
-  if (! .use.zero.dnase && 'DNase' %in% colnames(mat)) {
+  if (.remove.zero.dnase && 'DNase' %in% colnames(mat)) {
     dnase.non.zeros <- 0 != mat[,'DNase']
     message(cell, ': Removing regions with no DNase. ',
             'Reducing regions from ', length(dnase.non.zeros),
             ' to ', sum(dnase.non.zeros))
     mat <- mat[dnase.non.zeros,]
     response <- response[dnase.non.zeros]
+    chrom <- chrom[dnase.non.zeros]
     message(cell, ': Proportion bound: ', prop.bound(response))
   }
   #
@@ -236,6 +284,7 @@ load.cell.data <- function(
     .sample <- sample.int(nrow(mat), size = as.integer(.sample.prop * nrow(mat)))
     mat <- mat[.sample,]
     response <- response[.sample]
+    chrom <- chrom[.sample]
   }
   #
   # Add expression data if requested
@@ -247,13 +296,17 @@ load.cell.data <- function(
   }
   message(cell, ': Has ', nrow(mat), ' regions')
   list(
+    cell = Rle(cell, length(chrom)),
+    chrom = chrom,
     features = mat,
     response = factor(as.factor(response), levels = c('U', 'B')))
 }
 message('Creating training data')
-train.data <- lapply(cell.train, load.cell.data)
-train.feat <- do.call(rbind, lapply(train.data, function(d) d$features))
-train.resp <- do.call(c,     lapply(train.data, function(d) d$response))
+train.data  <- lapply(cell.train, load.cell.data)
+train.feat  <- do.call(rbind, lapply(train.data, function(d) d$features))
+train.resp  <- do.call(c,     lapply(train.data, function(d) d$response))
+train.cell  <- do.call(c,     lapply(train.data, function(d) d$cell))
+train.chrom <- do.call(c,     lapply(train.data, function(d) d$chrom))
 train.cell.nrows <- lapply(train.data, function(x) nrow(x$features))
 rm(train.data)  # No longer needed
 message('Training matrix size: ', object.size(train.feat))
@@ -269,7 +322,8 @@ xgboost.fit <- function(
   nround = 300,
   nfold = 5,
   early.stop.round = 50,
-  folds = NULL
+  folds_test = NULL,
+  folds_train = NULL
 ) {
   #
   # Perform cross-validation to choose number of rounds
@@ -281,12 +335,12 @@ xgboost.fit <- function(
       data = data,
       nround = nround,
       nfold = nfold,
-      folds = folds,
-      early_stopping_rounds = early.stop.round,
-      maximize = TRUE,
-      metrics = list('map')))
+      folds_test = folds_test,
+      folds_train = folds_train,
+      # maximize = TRUE,
+      # metrics = list('map'),
+      early_stopping_rounds = early.stop.round))
   print(cv.time)
-  cv.result
   nround.best <- cv.result$best_ntreelimit
   message('CV best number of rounds: ', nround.best)
   if (nround.best == nround) {
@@ -316,24 +370,36 @@ if ('xgboost' == method) {
   if (length(train.cell.nrows) > 1) {
     #
     # we have enough cells to use CV across cell types
-    last.idx <- as.integer(0)
-    folds <- list()
-    for (.nrow in train.cell.nrows) {
-      new.last.idx <- last.idx + .nrow
-      folds <- c(folds, (last.idx+1):new.last.idx)
-      last.idx <- new.last.idx
-    }
+    chr.sets <- list(
+      chr.levels[seq(1, length(chr.levels), by = 2)],
+      chr.levels[seq(2, length(chr.levels), by = 2)])
+    .grid <- expand.grid(cell = unique(runValue(train.cell)), chr.set = c(1, 2))
+    folds_train <- lapply(
+      1:nrow(.grid),
+      function(i) {
+        test.cell <- .grid$cell[i]
+        test.chroms <- chr.sets[[.grid$chr.set[i]]]
+        which(train.cell != test.cell & ! train.chrom %in% test.chroms)
+      })
+    folds_test <- lapply(
+      1:nrow(.grid),
+      function(i) {
+        test.cell <- .grid$cell[i]
+        test.chroms <- chr.sets[[.grid$chr.set[i]]]
+        which(train.cell == test.cell & train.chrom %in% test.chroms)
+      })
   } else {
     #
     # just let xgb.cv use randomly chosen folds
-    folds <- NULL
+    folds_test <- NULL
+    folds_train <- NULL
   }
   #
   # Fit with xgboost
   #
   message('Fitting model with xgboost')
   dtrain <- xgb.DMatrix(train.feat, label = train.resp - 1)
-  fit <- xgboost.fit(data = dtrain, nround = max.boost.rounds, folds = folds)
+  fit <- xgboost.fit(data = dtrain, nround = max.boost.rounds, folds_test = folds_test, folds_train = folds_train)
   xgb.save(fit, fit.path)
 } else if ('glmnet' == method) {
   #
@@ -355,7 +421,7 @@ rm(train.feat)  # No longer needed
 # Create validation matrix
 #
 message('Creating validation data')
-valid.feat <- load.cell.data(cell.valid, .use.zero.dnase = TRUE, .sample.prop = 1, .remove.ambiguous = FALSE)$features
+valid.feat <- load.cell.data(cell.valid, .remove.zero.dnase = FALSE, .sample.prop = 1, .remove.ambiguous = FALSE, .down.sample = FALSE)$features
 message('Validation data size : ', object.size(valid.feat))
 message('# validation regions : ', nrow(valid.feat))
 
