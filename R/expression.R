@@ -32,3 +32,16 @@ load.avg.expr <- memoise::memoise(function(cell) {
       summarise(log.TPM = mean(log10(TPM+1)), log.FPKM = mean(log10(FPKM+1))) %>%
       mutate(ensembl_gene_id = factor(stringr::str_split_fixed(gene_id, stringr::fixed('.'), 2)[,1]))
 })
+
+
+#' Get the expression features for the cell
+#'
+expr.features.for.cell <- function(.cell) {
+  cluster.expr <- filter(expr.cell.cluster, .cell == cell)
+  cell.expr <- cluster.expr$log.TPM
+  names(cell.expr) <- stringr::str_c('expr.', cluster.expr$cluster_id)
+  #
+  # Add the genes of interest expression levels
+  #
+  c(cell.expr, expr.of.interest[,.cell])
+}
