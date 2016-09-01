@@ -13,7 +13,7 @@
 #SBATCH --ntasks=1                      # How many tasks will there be in total? (<= nodes*16)
 #SBATCH --cpus-per-task=16              # How many CPUs per task
 #SBATCH --mem=61440                     # How many MB each node is allocated
-#SBATCH --time=12:00:00                 # How much wallclock time will be required?
+#SBATCH --time=24:00:00                 # How much wallclock time will be required?
 #SBATCH -o predict/predict-%j.out       # stdout
 #SBATCH -e predict/predict-%j.out       # stderr
 #SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
@@ -88,6 +88,7 @@ message('Use expression: ', toString(use.expr))
 feat.tags <- do.call(stringr::str_c, c(feat.names, list(sep = "_")))
 if (use.expr) feat.tags <- stringr::str_c(feat.tags, '_expr')
 fit.id <- stringr::str_c(method, '.', tag, '.', as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
+message('Fit ID: ', fit.id)
 predictions.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('predictions.', fit.id, '.tsv'))
 
 
