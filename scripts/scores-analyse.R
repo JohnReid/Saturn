@@ -1,5 +1,8 @@
 #!/usr/bin/env Rscript
-"Usage: scores-analyse.R SCORESTSV" -> doc
+"Usage: scores-analyse.R [options] SCORESTSV
+
+--tag=TAG            Only use results with tags that match TAG regular expression
+--method=METHOD      Only use results whose method matches METHOD regular expression" -> doc
 
 
 #
@@ -20,9 +23,11 @@ library(stringr)
 #
 # Parse options
 #
-# .args <- "../slurm/scores-with-Well.tsv"
+# .args <- "--method=xgboost ../slurm/scores.tsv"
 if (! exists(".args")) .args <- commandArgs(TRUE)  # Check if we have manually set arguments for debugging
 opts <- docopt::docopt(doc, args = .args)
+method.re <- opts[['method']]
+tag.re <- opts[['tag']]
 scorestsv <- opts$SCORESTSV
 plots.dir <- '../Plots'
 plots.tag <- 'scores'
@@ -69,6 +74,16 @@ scores$motif.tags <- factor(stringr::str_replace(parsed[,3], 'DREME-.*', 'DREME'
 scores$method <- factor(parsed[,4])
 scores$tag <- factor(parsed[,5])
 sapply(scores, class)
+
+
+#
+# Filter scores
+#
+scores <-
+  scores %>%
+  filter(
+    stringr::str_detect(method, method.re),
+    stringr::str_detect(tag, tag.re))
 
 
 #
