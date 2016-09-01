@@ -25,7 +25,7 @@ predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 
 Options:
   --method=METHOD        Use METHOD [default: glmnet]
-  --tag=TAG              Add TAG to results name. [default: '']
+  --tag=TAG              Add TAG to results name.
   -f --features=NAME     Use NAME features
   --max-boosting=MAXIMUM MAXIMUM number of boost rounds for xgboost method [default: 300]
   --expr                 Use expression summary [default: FALSE]
@@ -45,6 +45,9 @@ options(warn = 2)
 #
 devtools::load_all()
 library(Saturn)
+library(ggplot2)
+library(ggthemes)
+library(stringr)
 
 
 #
@@ -55,7 +58,7 @@ library(Saturn)
 # .args <- "--tag=test -f DNase -f KnownMotifs -s .01 --expr GABPA SK-N-SH"
 # .args <- "--tag=test --method=xgboost -f DNase -f DREMEWell --expr -s .01 ATF2 GM12878"
 # .args <- "--tag=test --method=xgboost --sample=.1 --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
-# .args <- "--method=xgboost -d -f DNase -f Known CEBPB A549"
+# .args <- "--method=xgboost --max-boosting=30 -d -f DNase -f Known CEBPB A549"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 message('Arguments: ', .args)
@@ -86,25 +89,25 @@ message('Use expression: ', toString(use.expr))
 #
 # Construct output filenames
 #
-feat.tags <- do.call(stringr::str_c, c(feat.names, list(sep = "_")))
-if (use.expr) feat.tags <- stringr::str_c(feat.tags, '_expr')
-fit.id <- stringr::str_c(method, '.', tag, '.', as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
+feat.tags <- do.call(str_c, c(feat.names, list(sep = "_")))
+if (use.expr) feat.tags <- str_c(feat.tags, '_expr')
+fit.id <- str_c(method, '.', tag, '.', as.character(tf), '.', as.character(cell.valid), '.', feat.tags)
 message('Fit ID: ', fit.id)
-predictions.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('predictions.', fit.id, '.tsv'))
+predictions.path <- file.path(saturn.data(), 'Predictions', str_c('predictions.', fit.id, '.tsv'))
 
 
 #
 # Load prediction package
 #
 if ('xgboost' == method) {
-  # devtools::load_all(stringr::str_c(Sys.getenv('HOME'), '/src/xgboost/R-package'))
+  # devtools::load_all(str_c(Sys.getenv('HOME'), '/src/xgboost/R-package'))
   library(xgboost)
-  fit.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('fit.', fit.id, '.xgb'))
+  fit.path <- file.path(saturn.data(), 'Predictions', str_c('fit.', fit.id, '.xgb'))
 } else if ('glmnet' == method) {
   library(glmnet)
-  fit.path <- file.path(saturn.data(), 'Predictions', stringr::str_c('fit.', fit.id, '.rds'))
+  fit.path <- file.path(saturn.data(), 'Predictions', str_c('fit.', fit.id, '.rds'))
 } else {
-  stop(stringr::str_c('Unknown method: ', method))
+  stop(str_c('Unknown method: ', method))
 }
 
 
@@ -148,21 +151,21 @@ if (! length(cell.train)) stop('We have no training data for this cell')
 # Fix training and validation chromosomes
 #
 if ('submit' == valid.split) {
-  chrs.train <- factor(stringr::str_c('chr', c(2:7, 9:20, 22)), levels = chr.levels)
+  chrs.train <- factor(str_c('chr', c(2:7, 9:20, 22)), levels = chr.levels)
   chrs.valid <- factor(chr.levels, levels = chr.levels)
 } else if ('ladder' == valid.split) {
-  chrs.train <- factor(stringr::str_c('chr', c(2:7, 9:20, 22)), levels = chr.levels)
-  chrs.valid <- factor(stringr::str_c('chr', c(1, 8, 21)), levels = chr.levels)
+  chrs.train <- factor(str_c('chr', c(2:7, 9:20, 22)), levels = chr.levels)
+  chrs.valid <- factor(str_c('chr', c(1, 8, 21)), levels = chr.levels)
 } else if ('train' == valid.split) {
-  chrs.train <- factor(stringr::str_c('chr', c(3:6, 9:19, 22)), levels = chr.levels)
+  chrs.train <- factor(str_c('chr', c(3:6, 9:19, 22)), levels = chr.levels)
   chrs.valid <- factor(c('chr2', 'chr7', 'chr20'), levels = chr.levels)
 } else {
   stop('Validation cell split must be one of "train", "ladder" or "submit"')
 }
 message('Chromosomes for training:   ',
-        do.call(stringr::str_c, c(as.character(chrs.train), list(sep = ', '))))
+        do.call(str_c, c(as.character(chrs.train), list(sep = ', '))))
 message('Chromosomes for validation: ',
-        do.call(stringr::str_c, c(as.character(chrs.valid), list(sep = ', '))))
+        do.call(str_c, c(as.character(chrs.valid), list(sep = ', '))))
 
 
 #
@@ -316,6 +319,18 @@ message('# regions : ', nrow(train.feat))
 message('# features: ', ncol(train.feat))
 
 
+#' Parse the evaluation log that xgb.cv returns
+#'
+parse.cv.results <- function(evaluation.log) {
+  .df1 <- dplyr::select(evaluation.log, c(1,2,3))
+  .df1$split <- str_replace(colnames(.df1)[[2]], '_mean$', '')
+  names(.df1)[c(2,3)] <- c('mean', 'std')
+  .df2 <- dplyr::select(evaluation.log, c(1,4,5))
+  .df2$split <- str_replace(colnames(.df2)[[2]], '_mean$', '')
+  names(.df2)[c(2,3)] <- c('mean', 'std')
+  rbind(.df1, .df2)
+}
+
 #
 # Do cross-validation on number of boosting rounds
 #
@@ -343,6 +358,21 @@ xgboost.fit <- function(
       # metrics = list('map'),
       early_stopping_rounds = early.stop.round))
   print(cv.time)
+  #
+  # Plot CV details
+  gp <-
+    ggplot(
+      parse.cv.results(cv.result$evaluation_log),
+      aes(x = iter, y = mean, ymin = mean - std, ymax = mean + std, colour = split)) +
+    geom_line() +
+    geom_errorbar() +
+    scale_colour_few() +
+    theme_few()
+  cv.results.path <- file.path(saturn.data(), 'Predictions', str_c('cv-results.', fit.id, '.pdf'))
+  message('Saving CV results plot: ', cv.results.path)
+  ggsave(cv.results.path, plot = gp)
+  #
+  # Decide which nround is best
   nround.best <- cv.result$best_ntreelimit
   message('CV best number of rounds: ', nround.best)
   if (nround.best == nround) {
