@@ -55,6 +55,7 @@ library(Saturn)
 # .args <- "--tag=test -f DNase -f KnownMotifs -s .01 --expr GABPA SK-N-SH"
 # .args <- "--tag=test --method=xgboost -f DNase -f DREMEWell --expr -s .01 ATF2 GM12878"
 # .args <- "--tag=test --method=xgboost --sample=.1 --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
+# .args <- "--method=xgboost -d -f DNase -f Known CEBPB A549"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
 message('Arguments: ', .args)
@@ -361,6 +362,18 @@ xgboost.fit <- function(
 }
 
 
+#'
+#' Create a xgb.DMatrix from a dgCMatrix working around bug in xgboost where zero rows at end
+#' of dgCMatrix are ignored.
+#'
+DMatrix.from.dgC <- function(dgC, ...) {
+  if (0 == dgC[nrow(dgC), 1]) {
+    dgC[nrow(dgC), 1] <- .Machine$double.eps
+  }
+  xgb.DMatrix(dgC, ...)
+}
+
+
 #
 # Fit model
 #
@@ -399,7 +412,7 @@ if ('xgboost' == method) {
   # Fit with xgboost
   #
   message('Fitting model with xgboost')
-  dtrain <- xgb.DMatrix(train.feat, label = train.resp - 1)
+  dtrain <- DMatrix.from.dgC(train.feat, label = train.resp - 1)
   fit <- xgboost.fit(data = dtrain, nround = max.boost.rounds, folds_test = folds_test, folds_train = folds_train)
   xgb.save(fit, fit.path)
 } else if ('glmnet' == method) {
@@ -426,17 +439,6 @@ valid.feat <- load.cell.data(cell.valid, .remove.zero.dnase = FALSE, .sample.pro
 message('Validation data size : ', object.size(valid.feat))
 message('# validation regions : ', nrow(valid.feat))
 
-
-#'
-#' Create a xgb.DMatrix from a dgCMatrix working around bug in xgboost where zero rows at end
-#' of dgCMatrix are ignored.
-#'
-DMatrix.from.dgC <- function(dgC) {
-  if (0 == dgC[nrow(dgC), 1]) {
-    dgC[nrow(dgC), 1] <- .Machine$double.eps
-  }
-  xgb.DMatrix(dgC)
-}
 
 #
 # Make predictions on validation data
