@@ -25,10 +25,10 @@ predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 
 Options:
   --method=METHOD        Use METHOD [default: glmnet]
-  --tag=TAG              Add TAG to results name.
-  -f --features=NAME     Use NAME features
   --max-boosting=MAXIMUM MAXIMUM number of boost rounds for xgboost method [default: 300]
-  --expr                 Use expression summary [default: FALSE]
+  --tag=TAG              Add TAG to results name. [default: '']
+  --expr                 Use expression summary features [default: FALSE]
+  -f --features=NAME     Use NAME features
   -r --remove-zero-dnase Don't use regions with zero DNase levels [default: FALSE]
   -d --down-sample       Down-sample training regions (stratified by DNase) [default: False]
   -s --sample=PROP       Subsample training regions to with proportion PROP [default: 1]" -> doc
@@ -354,8 +354,8 @@ xgboost.fit <- function(
       nfold = nfold,
       folds_test = folds_test,
       folds_train = folds_train,
-      # maximize = TRUE,
-      # metrics = list('map'),
+      maximize = TRUE,
+      metrics = list('map'),
       early_stopping_rounds = early.stop.round))
   print(cv.time)
   #
