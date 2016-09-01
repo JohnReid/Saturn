@@ -54,7 +54,7 @@ library(stringr)
 # Parse options
 #
 # .args <- "--tag=test --motif=Known ARID3A K562"
-# .args <- "--tag=test --motif=Known GATA3 A549"
+# .args <- "--tag=test -r -f DNase -f Known GATA3 A549"
 # .args <- "--tag=test -f DNase -f KnownMotifs -s .01 --expr GABPA SK-N-SH"
 # .args <- "--tag=test --method=xgboost -f DNase -f DREMEWell --expr -s .01 ATF2 GM12878"
 # .args <- "--tag=test --method=xgboost --sample=.1 --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
@@ -338,8 +338,8 @@ parse.cv.results <- function(evaluation.log) {
 xgboost.fit <- function(
   data,
   nround = 300,
-  nfold = 5,
   early.stop.round = 50,
+  folds = NULL,
   folds_test = NULL,
   folds_train = NULL
 ) {
@@ -352,7 +352,7 @@ xgboost.fit <- function(
       params = param,
       data = data,
       nround = nround,
-      nfold = nfold,
+      folds = folds,
       folds_test = folds_test,
       folds_train = folds_train,
       maximize = TRUE,
@@ -433,9 +433,17 @@ if ('xgboost' == method) {
         test.chroms <- chr.sets[[.grid$chr.set[i]]]
         which(train.cell == test.cell & train.chrom %in% test.chroms)
       })
+    folds <- NULL
   } else {
     #
-    # just let xgb.cv use randomly chosen folds
+    # We only have one training cell type, 5-fold cross-validate by chromosome
+    chr.sets <- list(
+      chrs.train[seq(1, length(chrs.train), by = 5)],
+      chrs.train[seq(2, length(chrs.train), by = 5)],
+      chrs.train[seq(3, length(chrs.train), by = 5)],
+      chrs.train[seq(4, length(chrs.train), by = 5)],
+      chrs.train[seq(5, length(chrs.train), by = 5)])
+    folds <- lapply(chr.sets, function(chrs) which(train.chrom %in% chrs))
     folds_test <- NULL
     folds_train <- NULL
   }
@@ -444,7 +452,9 @@ if ('xgboost' == method) {
   #
   message('Fitting model with xgboost')
   dtrain <- DMatrix.from.dgC(train.feat, label = train.resp - 1)
-  fit <- xgboost.fit(data = dtrain, nround = max.boost.rounds, folds_test = folds_test, folds_train = folds_train)
+  fit <- xgboost.fit(
+    data = dtrain, nround = max.boost.rounds, folds = folds,
+    folds_test = folds_test, folds_train = folds_train)
   xgb.save(fit, fit.path)
 } else if ('glmnet' == method) {
   #
@@ -466,7 +476,12 @@ rm(train.feat)  # No longer needed
 # Create validation matrix
 #
 message('Creating validation data')
-valid.feat <- load.cell.data(cell.valid, .remove.zero.dnase = FALSE, .sample.prop = 1, .remove.ambiguous = FALSE, .down.sample = FALSE)$features
+valid.feat <- load.cell.data(
+  cell.valid,
+  .remove.zero.dnase = FALSE,
+  .sample.prop = 1,
+  .remove.ambiguous = FALSE,
+  .down.sample = FALSE)$features
 message('Validation data size : ', object.size(valid.feat))
 message('# validation regions : ', nrow(valid.feat))
 
