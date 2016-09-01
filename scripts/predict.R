@@ -339,8 +339,8 @@ xgboost.fit <- function(
       nfold = nfold,
       folds_test = folds_test,
       folds_train = folds_train,
-      # maximize = TRUE,
-      # metrics = list('map'),
+      maximize = TRUE,
+      metrics = list('map'),
       early_stopping_rounds = early.stop.round))
   print(cv.time)
   nround.best <- cv.result$best_ntreelimit
