@@ -25,10 +25,10 @@ predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 
 Options:
   --method=METHOD        Use METHOD [default: glmnet]
-  --tag=TAG              Add TAG to results name. [default: '']
-  -f --features=NAME     Use NAME features
   --max-boosting=MAXIMUM MAXIMUM number of boost rounds for xgboost method [default: 300]
-  --expr                 Use expression summary [default: FALSE]
+  --tag=TAG              Add TAG to results name. [default: '']
+  --expr                 Use expression summary features [default: FALSE]
+  -f --features=NAME     Use NAME features
   -r --remove-zero-dnase Don't use regions with zero DNase levels [default: FALSE]
   -d --down-sample       Down-sample training regions (stratified by DNase) [default: False]
   -s --sample=PROP       Subsample training regions to with proportion PROP [default: 1]" -> doc
