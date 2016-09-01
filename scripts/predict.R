@@ -24,14 +24,14 @@
 predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 
 Options:
-  --method=METHOD        Use METHOD [default: glmnet]
-  --max-boosting=MAXIMUM MAXIMUM number of boost rounds for xgboost method [default: 300]
-  --tag=TAG              Add TAG to results name. [default: '']
-  --expr                 Use expression summary features [default: FALSE]
-  -f --features=NAME     Use NAME features
-  -r --remove-zero-dnase Don't use regions with zero DNase levels [default: FALSE]
-  -d --down-sample       Down-sample training regions (stratified by DNase) [default: False]
-  -s --sample=PROP       Subsample training regions to with proportion PROP [default: 1]" -> doc
+  --method=METHOD          Use METHOD [default: xgboost]
+  --max-boosting=MAXIMUM   MAXIMUM number of boost rounds for xgboost method [default: 3000]
+  --tag=TAG                Add TAG to results name.
+  --expr                   Use expression summary features [default: FALSE]
+  -f --features=NAME       Use NAME features
+  -r --remove-zero-dnase   Don't use regions with zero DNase levels [default: FALSE]
+  -d --down-sample         Down-sample training regions (stratified by DNase) [default: FALSE]
+  -s --sample=PROP         Subsample training regions to with proportion PROP [default: 1]" -> doc
 
 
 #
@@ -58,10 +58,11 @@ library(stringr)
 # .args <- "--tag=test -f DNase -f KnownMotifs -s .01 --expr GABPA SK-N-SH"
 # .args <- "--tag=test --method=xgboost -f DNase -f DREMEWell --expr -s .01 ATF2 GM12878"
 # .args <- "--tag=test --method=xgboost --sample=.1 --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
+# .args <- "--tag=remove --method=xgboost -r -f DNase -f Known -f KnownWell -f DREME -f DREMEWell --max-boosting=5555 E2F1 GM12878"
 # .args <- "--method=xgboost --max-boosting=30 -d -f DNase -f Known CEBPB A549"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
-message('Arguments: ', .args)
+message('Arguments: ', do.call(paste, as.list(.args)))
 opts <- docopt::docopt(doc, args = .args)
 print(opts)
 tf <- factor(opts$TF, tf.levels)
