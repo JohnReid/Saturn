@@ -338,7 +338,7 @@ parse.cv.results <- function(evaluation.log) {
 xgboost.fit <- function(
   data,
   nround = 300,
-  early.stop.round = 50,
+  early.stop.round = 300,
   folds = NULL,
   folds_test = NULL,
   folds_train = NULL
