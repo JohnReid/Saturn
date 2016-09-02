@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+fusermount -u ../bsu-hpc/Repository
+fusermount -u ../bsu-hpc/Data

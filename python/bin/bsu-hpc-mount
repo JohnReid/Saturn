@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+sshfs bsu-hpc:Dev/Saturn ../bsu-hpc/Repository
+sshfs bsu-hpc:/scratch/jer15/Dev/Saturn/Data ../bsu-hpc/Data
+
