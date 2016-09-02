@@ -1,0 +1,30 @@
+#!/bin/bash -e
+
+HOST=rohslab.usc.edu
+USER=anonymous
+PASSWD=guest
+
+#
+# Change to data directory
+#
+cd $SATURNDIR/Data/DNAshape/
+
+#
+# Do FTP
+#
+ftp -n $HOST <<END_SCRIPT
+quote USER $USER
+quote PASS $PASSWD
+cd hg19
+binary
+get hg19.HelT.wig.bw
+get hg19.HelT.2nd.wig.bw
+get hg19.MGW.wig.bw
+get hg19.MGW.2nd.wig.bw
+get hg19.OC2.wig.bw
+get hg19.ProT.wig.bw
+get hg19.ProT.2nd.wig.bw
+get hg19.Roll.wig.bw
+get hg19.Roll.2nd.wig.bw
+quit
+END_SCRIPT
