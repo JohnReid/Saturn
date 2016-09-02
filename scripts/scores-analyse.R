@@ -97,11 +97,11 @@ scores.filtered <- scores %>% left_join(num.preds) %>% filter(most.preds == num.
 # Plot scores
 #
 # AUROC vs. AUPRC
-ggplot(scores, aes(x = AUROC, y = AUPRC, label = TF, fill = interaction(motif.tags, method, tag))) +
-  geom_label() +
-  scale_fill_few() +
-  theme_few()
-save.plot('AUROC-AUPRC')
+# ggplot(scores, aes(x = AUROC, y = AUPRC, label = TF, fill = interaction(motif.tags, method, tag))) +
+  # geom_label() +
+  # scale_fill_few() +
+  # theme_few()
+# save.plot('AUROC-AUPRC')
 # AUPRC by TF
 ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, fill = interaction(motif.tags, method, tag))) +
   geom_boxplot() +
