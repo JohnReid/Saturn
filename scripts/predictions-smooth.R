@@ -1,5 +1,10 @@
 #!/usr/bin/env Rscript
-"Usage: predictions-smooth.R IN OUT" -> doc
+"Usage: predictions-smooth.R [options] IN OUT
+
+Options:
+  -l --length-scale=LENGTHSCALE  Use LENGTHSCALE [default: 50]
+  --logodds                      Smooth log-odds instead of probabilities [default: FALSE]
+  --width MAXWIDTH               Width of kernel in units of regions [default: 20]" -> doc
 
 
 #
@@ -11,16 +16,15 @@ options(warn = 2)
 #
 # Parse options
 #
-.args <- "../Data/Predictions/predictions.xgboost.chrfold.EGR1.H1-hESC.DNase_Known_KnownWell_DREME_DREMEWell.tsv smoothed-predictions.tsv"
+# .args <- "--logodds ../Data/Predictions/predictions.xgboost.chrfold.EGR1.H1-hESC.DNase_Known_KnownWell_DREME_DREMEWell.tsv ../slurm/smoothed-predictions.tsv"
 if (! exists(".args")) .args <- commandArgs(TRUE)  # Check if we have manually set arguments for debugging
 opts <- docopt::docopt(doc, args = .args)
+print(opts)
 in.path <- opts$IN
 out.path <- opts$OUT
-
-
-log.transform <- TRUE
-MAX.WIDTH <- 5  # Maximum width of our kernel for smoothing
-L <- 200        # Length scale
+log.transform <- as.logical(opts[['logodds']])
+max.width <- as.integer(opts[['width']])
+length.scale <- as.numeric(opts[['length-scale']])
 
 
 #
@@ -40,7 +44,7 @@ message('# predictions: ', N)
 row.similarity <- function(i, j) {
   ifelse(
     preds$chrom[i] == preds$chrom[j],
-    exp(-((preds$start[i] - preds$start[j])/L)**2/2),
+    exp(-((preds$start[i] - preds$start[j])/length.scale)**2/2),
     0)
 }
 
@@ -49,8 +53,8 @@ row.similarity <- function(i, j) {
 # Create sparse symmetric banded similarity matrix
 #
 # Calculate non-zero indices and values
-i <- as.vector(sapply(1:N, function(i) rep(i, MAX.SEP)))
-j <- rep(1:MAX.SEP, N) + i - 1
+i <- as.vector(sapply(1:N, function(i) rep(i, max.width)))
+j <- rep(1:max.width, N) + i - 1
 x <- row.similarity(i, j)
 #
 # Discard indices outside matrix
@@ -86,12 +90,12 @@ if (log.transform) {
 }
 predictions.smoothed <- K.norm %*% predictions
 if (log.transform) {
-  predictions <- logistic(predictions)
+  predictions.smoothed <- logistic(predictions.smoothed)
 }
 
 
 #
 # Write predictions
 #
-preds$prediction <- predictions
+preds$prediction <- as.vector(predictions.smoothed)
 data.table::fwrite(preds, out.path, sep = '\t', col.names = FALSE)

@@ -364,9 +364,9 @@ xgboost.fit <- function(
   gp <-
     ggplot(
       parse.cv.results(cv.result$evaluation_log),
-      aes(x = iter, y = mean, ymin = mean - std, ymax = mean + std, colour = split)) +
+      aes(x = iter, y = mean, ymin = mean - std, ymax = mean + std, colour = split, fill = split)) +
     geom_line() +
-    geom_errorbar() +
+    geom_ribbon(alpha = .3) +
     scale_colour_few() +
     theme_few()
   cv.results.path <- file.path(saturn.data(), 'Predictions', str_c('cv-results.', fit.id, '.pdf'))
