@@ -337,8 +337,8 @@ parse.cv.results <- function(evaluation.log) {
 #
 xgboost.fit <- function(
   data,
-  nround = 300,
-  early.stop.round = 300,
+  nround,
+  early.stop.round = 500,
   folds = NULL,
   folds_test = NULL,
   folds_train = NULL
@@ -453,8 +453,11 @@ if ('xgboost' == method) {
   message('Fitting model with xgboost')
   dtrain <- DMatrix.from.dgC(train.feat, label = train.resp - 1)
   fit <- xgboost.fit(
-    data = dtrain, nround = max.boost.rounds, folds = folds,
-    folds_test = folds_test, folds_train = folds_train)
+    data = dtrain,
+    nround = max.boost.rounds,
+    folds = folds,
+    folds_test = folds_test,
+    folds_train = folds_train)
   xgb.save(fit, fit.path)
 } else if ('glmnet' == method) {
   #
