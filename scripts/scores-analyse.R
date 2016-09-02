@@ -79,11 +79,8 @@ sapply(scores, class)
 #
 # Filter scores
 #
-scores <-
-  scores %>%
-  filter(
-    stringr::str_detect(method, method.re),
-    stringr::str_detect(tag, tag.re))
+if (! is.null(method.re)) scores <- filter(scores, stringr::str_detect(method, method.re))
+if (! is.null(   tag.re)) scores <- filter(scores, stringr::str_detect(tag   ,    tag.re))
 
 
 #
