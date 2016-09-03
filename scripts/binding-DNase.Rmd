@@ -1,0 +1,81 @@
+---
+title: "Analyse how binding relates to DNase levels"
+author: John Reid
+output: pdf_document
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('binding-dnase.Rmd')
+```
+
+```{r params, echo = FALSE}
+library(Saturn)
+knitr::opts_chunk$set(fig.width = 18, fig.height = 12)
+```
+
+
+# Parameters
+
+```{r parameters}
+library(ggplot2)
+library(ggthemes)
+tf <- 'ATF3'
+cell <- 'HCT116'
+```
+
+
+# Load data
+
+```{r loadExpr, message = FALSE}
+summarise.tf.cell <- function(row) {
+    tf <- row$TF
+    cell <- row$cell
+    message('Summarising ', tf, ' in ', cell)
+    chip <- load.chip.features(tf)
+    dnase <- load.feature('DNase', tf, cell)
+    dnase <- dnase[as.vector(training.region.test.idxs()),]
+    df <- S4Vectors::DataFrame(
+    dnase = Rle(dnase > 0),
+    bound = chip[,cell])
+    ratio.bound <- with(df,sum(bound == 'B') / sum(bound == 'U'))
+    ratio.dnase.bound   <- with(df, sum('B' == bound & dnase) / sum('B' == bound & ! dnase))
+    ratio.dnase.unbound <- with(df, sum('U' == bound & dnase) / sum('U' == bound & ! dnase))
+    prop.bound.non.zero   <- with(df, sum('B' == bound & dnase) / sum('B' == bound))
+    prop.unbound.non.zero <- with(df, sum('U' == bound & dnase) / sum('U' == bound))
+    data.frame(
+        TF = tf,
+        cell = cell,
+        ratio.bound = ratio.bound,
+        prop.dnase = c(prop.bound.non.zero, prop.unbound.non.zero),
+        ratio.dnase = c(ratio.dnase.bound, ratio.dnase.unbound),
+        bound = c('B', 'U'))
+}
+summaries <-
+    tfs %>%
+    dplyr::filter(split == 'train') %>%
+    rowwise() %>%
+    do(summarise.tf.cell(.)) %>%
+    ungroup()
+ggplot(summaries, aes(x = ratio.bound, y = ratio.dnase, colour = bound, label = cell)) +
+    geom_text() +
+    facet_wrap(~ TF, nrow = 4) +
+    scale_x_log10(breaks=c(.0005,.001,.005)) +
+    scale_y_log10() +
+    scale_colour_few() +
+    theme_few() +
+    theme(axis.text.x = element_text(angle = 90, vjust = .5))
+ggsave('../Plots/dnase-by-binding.pdf')
+```
+
+
+# Session information
+
+`r date()` on `r Sys.info()[["nodename"]]`
+```{r sessionInfo}
+devtools::session_info()
+largest.objects()
+```
