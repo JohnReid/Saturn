@@ -26,6 +26,7 @@ predict.R [options] [--features=NAME]... TF VALIDATIONCELL
 Options:
   --method=METHOD          Use METHOD [default: xgboost]
   --max-boosting=MAXIMUM   MAXIMUM number of boost rounds for xgboost method [default: 3000]
+  --early-stop=ROUNDS      Stop early if no improvement for ROUNDS in xgboost method [default: 100]
   --tag=TAG                Add TAG to results name.
   --expr                   Use expression summary features [default: FALSE]
   -f --features=NAME       Use NAME features
@@ -74,6 +75,7 @@ tag <- opts$tag
 feat.names <- opts$features
 sample.prop <- as.numeric(opts$sample)
 max.boost.rounds <- as.integer(opts[['max-boosting']])
+early.stop.rounds <- as.integer(opts[['early-stop']])
 remove.zero.dnase <- as.logical(opts[['remove-zero-dnase']])
 down.sample <- as.logical(opts[['down-sample']])
 use.expr <- as.logical(opts[['expr']])
@@ -338,7 +340,7 @@ parse.cv.results <- function(evaluation.log) {
 xgboost.fit <- function(
   data,
   nround,
-  early.stop.round = 500,
+  early_stopping_rounds,
   folds = NULL,
   folds_test = NULL,
   folds_train = NULL
@@ -357,7 +359,7 @@ xgboost.fit <- function(
       folds_train = folds_train,
       maximize = TRUE,
       metrics = list('map'),
-      early_stopping_rounds = early.stop.round))
+      early_stopping_rounds = early_stopping_rounds))
   print(cv.time)
   #
   # Plot CV details
@@ -455,6 +457,7 @@ if ('xgboost' == method) {
   fit <- xgboost.fit(
     data = dtrain,
     nround = max.boost.rounds,
+    early_stopping_rounds = early.stop.rounds,
     folds = folds,
     folds_test = folds_test,
     folds_train = folds_train)
