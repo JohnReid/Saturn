@@ -24,6 +24,7 @@ library(stringr)
 # Parse options
 #
 # .args <- "--method=xgboost ../slurm/scores.tsv"
+.args <- "--method=xgboost ../slurm/scores-smooth-search.tsv"
 if (! exists(".args")) .args <- commandArgs(TRUE)  # Check if we have manually set arguments for debugging
 opts <- docopt::docopt(doc, args = .args)
 method.re <- opts[['method']]
@@ -107,7 +108,7 @@ ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, fil
   geom_boxplot() +
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
-  scale_fill_few() +
+  # scale_fill_few() +
   theme_few()
 save.plot('AUPRC-by-TF')
 # AUPRC by cell
@@ -115,7 +116,7 @@ ggplot(scores.filtered, aes(x = reorder(cell, AUPRC, FUN = median), y = AUPRC, f
   geom_boxplot() +
   # geom_jitter(height = 0) +
   labs(x = 'cell') +
-  scale_fill_few() +
+  # scale_fill_few() +
   theme_few()
 save.plot('AUPRC-by-cell')
 # recall at 10% FDR by TF
@@ -123,7 +124,7 @@ ggplot(scores.filtered, aes(x = reorder(TF, recall_10, FUN = median), y = recall
   geom_boxplot() +
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
-  scale_fill_few() +
+  # scale_fill_few() +
   theme_few()
 save.plot('recall-10-by-TF')
 # recall at 50% FDR by TF
@@ -131,6 +132,6 @@ ggplot(scores.filtered, aes(x = reorder(TF, recall_50, FUN = median), y = recall
   geom_boxplot() +
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
-  scale_fill_few() +
+  # scale_fill_few() +
   theme_few()
 save.plot('recall-50-by-TF')
