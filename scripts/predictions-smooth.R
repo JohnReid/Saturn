@@ -1,10 +1,26 @@
 #!/usr/bin/env Rscript
+#!
+#! sbatch directives begin here ###############################
+#!
+#SBATCH -p mrc-bsu-sand                 # Partition
+#SBATCH -J PREDSMOOTH                   # Name of the job
+#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
+#SBATCH --nodes=1                       # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --cpus-per-task=1               # How many CPUs will be used per task
+#SBATCH --mem=7680                      # How many MB each node is allocated
+#SBATCH --time=06:00:00                 # How much wallclock time will be required?
+#SBATCH -o pred-smooth-%j.out           # stdout
+#SBATCH -e pred-smooth-%j.out           # stderr
+#SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
+##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
+                                        # interrupted by node failure or system downtime):
 "Usage: predictions-smooth.R [options] IN OUT
 
 Options:
   -l --length-scale=LENGTHSCALE  Use LENGTHSCALE [default: 50]
   --logodds                      Smooth log-odds instead of probabilities [default: FALSE]
-  --width MAXWIDTH               Width of kernel in units of regions [default: 20]" -> doc
+  --width=MAXWIDTH               Width of kernel in units of regions [default: 20]" -> doc
 
 
 #
@@ -53,5 +69,6 @@ predictions.smoothed <- smooth.predictions(preds, length.scale, max.width, log.t
 #
 # Write predictions
 #
+message('Writing predictions')
 preds$prediction <- as.vector(predictions.smoothed)
 data.table::fwrite(preds, out.path, sep = '\t', col.names = FALSE)
