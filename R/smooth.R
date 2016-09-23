@@ -4,30 +4,35 @@ smoothing.params <- rbind(
     TF      = c("ARID3A", "ATF2",   "ATF3",   "ATF7",   "CEBPB",  "CREB1",  "CTCF"),
     smooth  = c( TRUE,     TRUE,     TRUE,     TRUE,     FALSE,    TRUE,     FALSE),
     L       = c( 200,      200,      200,      200,      10,       50,       10),
+    W       = 10,
     LO      = TRUE
   ),
   data.frame(
     TF      = c("E2F1",   "E2F6",   "EGR1",   "EP300",  "FOXA1",  "FOXA2",  "GABPA"),
     smooth  = c( TRUE,     TRUE,     TRUE,     FALSE,    TRUE,     TRUE,     TRUE),
     L       = c( 200,      200,      50,       10,       99,       99,       50),
+    W       = 10,
     LO      = TRUE
   ),
   data.frame(
     TF      = c("GATA3",  "HNF4A",  "JUND",   "MAFK",   "MAX",    "MYC",    "NANOG"),
     smooth  = c( FALSE,    TRUE,     FALSE,    FALSE,    TRUE,     TRUE,     TRUE),
     L       = c( 200,      99,       10,       10,       50,       50,       99),
+    W       = 10,
     LO      = TRUE
   ),
   data.frame(
     TF      = c("REST",   "RFX5",   "SPI1",   "SRF",    "STAT3",  "TAF1",   "TCF12"),
     smooth  = c( TRUE,     TRUE,     TRUE,     TRUE,     TRUE,     TRUE,     TRUE),
     L       = c( 10,       200,      99,       200,      99,       50,       200),
+    W       = 10,
     LO      = TRUE
   ),
   data.frame(
     TF      = c("TCF7L2", "TEAD4",  "YY1",    "ZNF143"),
     smooth  = c( TRUE,     TRUE,     TRUE,     TRUE),
     L       = c( 200,      10,       50,       50),
+    W       = 10,
     LO      = TRUE
   ))
 
