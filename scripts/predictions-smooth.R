@@ -1,10 +1,26 @@
 #!/usr/bin/env Rscript
+#!
+#! sbatch directives begin here ###############################
+#!
+#SBATCH -p mrc-bsu-sand                 # Partition
+#SBATCH -J PREDSMOOTH                   # Name of the job
+#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
+#SBATCH --nodes=1                       # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --cpus-per-task=1               # How many CPUs will be used per task
+#SBATCH --mem=7680                      # How many MB each node is allocated
+#SBATCH --time=06:00:00                 # How much wallclock time will be required?
+#SBATCH -o pred-smooth-%j.out           # stdout
+#SBATCH -e pred-smooth-%j.out           # stderr
+#SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
+##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
+                                        # interrupted by node failure or system downtime):
 "Usage: predictions-smooth.R [options] IN OUT
 
 Options:
   -l --length-scale=LENGTHSCALE  Use LENGTHSCALE [default: 50]
   --logodds                      Smooth log-odds instead of probabilities [default: FALSE]
-  --width MAXWIDTH               Width of kernel in units of regions [default: 20]" -> doc
+  --width=MAXWIDTH               Width of kernel in units of regions [default: 20]" -> doc
 
 
 #
@@ -33,8 +49,6 @@ length.scale <- as.numeric(opts[['length-scale']])
 preds <- data.table::fread(
   in.path,
   col.names = c('chrom', 'start', 'end', 'prediction', 'bound'))
-head(preds)
-sapply(preds, class)
 N <- nrow(preds)
 message('# predictions: ', N)
 
@@ -59,20 +73,20 @@ x <- row.similarity(i, j)
 #
 # Discard indices outside matrix
 keep <- j <= N
-sum(! keep)
 i <- i[keep]
 j <- j[keep]
 x <- x[keep]
 #
 # Create matrix
 K <- Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(N, N), symmetric = TRUE)
-object.size(K)
+message('Smoothing matrix size: ', object.size(K))
 # K[1:12, 1:12]
 
 
 #
 # Normalise smoothing matrix by rows
 #
+message('Normalising smoothing matrix')
 row.sums <- Matrix::rowSums(K)
 K.norm <- Matrix::Diagonal(x = 1 / row.sums) %*% K
 sums.norm <- Matrix::rowSums(K.norm)
@@ -82,6 +96,7 @@ stopifnot(all(abs(1 - sums.norm) < 1e-12))
 #
 # Smooth predictions
 #
+message('Smoothing predictions')
 logistic <- function(x) 1/(1+exp(-x))
 logit <- function(p) log(p/(1-p))
 predictions <- preds$prediction
@@ -97,5 +112,6 @@ if (log.transform) {
 #
 # Write predictions
 #
+message('Writing predictions')
 preds$prediction <- as.vector(predictions.smoothed)
 data.table::fwrite(preds, out.path, sep = '\t', col.names = FALSE)
