@@ -48,9 +48,9 @@ for tf, group in tfs.groupby('TF'):
     if '-s' not in sys.argv and '--submit' not in sys.argv:
         group = group['submit' != group.split]
     #
-    # We need more than one cell type to run the prediction
-    if group.shape[0] >= 2:
-        continue
+    # No longer needed as can run with just one cell type in training data
+    # if group.shape[0] >= 2:
+    #     continue
     #
     # Define a function to replace %TF% with the TF name
     def substitutetf(s):
