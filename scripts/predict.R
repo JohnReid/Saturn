@@ -143,6 +143,15 @@ if ('ladder' == valid.split) {
 } else {
   stop('Validation cell split must be one of "train", "ladder" or "submit"')
 }
+#
+# Check we have some training cells for some TFs only have one cell type in
+# training data, in this case we use the same cell type for training and
+# validation.
+#
+if (0 == nrow(tf.cells)) {
+  message('WARNING: Using same cell type for training and validation.')
+  tf.cells <- tfs %>% filter(TF == tf, cell == cell.valid)
+}
 print(tf.cells)
 cell.all <- tf.cells$cell
 if (! cell.valid %in% cell.all) stop('We have no data for the validation cell type and this TF.')

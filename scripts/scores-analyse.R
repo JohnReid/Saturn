@@ -24,7 +24,7 @@ library(stringr)
 # Parse options
 #
 # .args <- "--method=xgboost ../slurm/scores.tsv"
-.args <- "--method=xgboost ../slurm/scores-smooth-search.tsv"
+# .args <- "--method=xgboost ../slurm/scores-smooth-search.tsv"
 if (! exists(".args")) .args <- commandArgs(TRUE)  # Check if we have manually set arguments for debugging
 opts <- docopt::docopt(doc, args = .args)
 method.re <- opts[['method']]
@@ -93,6 +93,63 @@ num.preds <-
   summarise(num.preds = n())
 most.preds = max(num.preds$num.preds)
 scores.filtered <- scores %>% left_join(num.preds) %>% filter(most.preds == num.preds)
+
+
+#
+# Parse tag, this is a list of name=value pairs separated by '-'
+#
+tags <- scores.filtered$tag
+.split <- (str_split(tags, '-'))
+split.row <- function(.row) {
+  .split.row <- str_split_fixed(.row, '=', 2)
+  .values <- .split.row[,2]
+  names(.values) <- .split.row[,1]
+  .values
+}
+parsed.tags <- lapply(.split, split.row)
+#
+# Only use those rows with the most number of tags
+#
+tag.lengths <- Map(length, parsed.tags)
+most.tags <- do.call(max, tag.lengths)
+has.most <- tag.lengths == most.tags
+tags.w.most <- do.call(rbind, parsed.tags[has.most])
+scores.w.tags <- cbind(scores.filtered[has.most,], tags.w.most)
+tag.names <- colnames(tags.w.most)
+#
+# Melt into format for plotting
+#
+melt(
+  scores.w.tags,
+  id.vars = c(c('TF', 'cell'), tag.names),
+  measure.vars = c('AUPRC'))
+#
+# Plot an analysis of each tag
+#
+for (tag in tag.names) {
+  ggplot(scores.w.tags, aes(x = TF, y = AUPRC)) +
+    geom_boxplot(aes_string(fill = tag)) +
+    # geom_jitter(height = 0) +
+    labs(x = 'TF') +
+    scale_fill_few() +
+    theme_few()
+  save.plot(str_c('AUPRC-by-TF-', tag))
+  ggplot(scores.w.tags, aes(x = TF, y = recall_10)) +
+    geom_boxplot(aes_string(fill = tag)) +
+    # geom_jitter(height = 0) +
+    labs(x = 'TF') +
+    scale_fill_few() +
+    theme_few()
+  save.plot(str_c('recall-10-by-TF-', tag))
+  ggplot(scores.w.tags, aes(x = TF, y = recall_50)) +
+    geom_boxplot(aes_string(fill = tag)) +
+    # geom_jitter(height = 0) +
+    labs(x = 'TF') +
+    scale_fill_few() +
+    theme_few()
+  save.plot(str_c('recall-50-by-TF-', tag))
+}
+
 
 #
 # Plot scores

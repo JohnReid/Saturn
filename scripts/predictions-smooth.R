@@ -24,6 +24,13 @@ Options:
 
 
 #
+# Load package
+#
+devtools::load_all()
+library(Saturn)
+
+
+#
 # Set warnings as errors
 #
 options(warn = 2)
@@ -49,64 +56,14 @@ length.scale <- as.numeric(opts[['length-scale']])
 preds <- data.table::fread(
   in.path,
   col.names = c('chrom', 'start', 'end', 'prediction', 'bound'))
-N <- nrow(preds)
-message('# predictions: ', N)
-
-
-#' Distance between two rows
-#'
-row.similarity <- function(i, j) {
-  ifelse(
-    preds$chrom[i] == preds$chrom[j],
-    exp(-((preds$start[i] - preds$start[j])/length.scale)**2/2),
-    0)
-}
-
-
-#
-# Create sparse symmetric banded similarity matrix
-#
-# Calculate non-zero indices and values
-i <- as.vector(sapply(1:N, function(i) rep(i, max.width)))
-j <- rep(1:max.width, N) + i - 1
-x <- row.similarity(i, j)
-#
-# Discard indices outside matrix
-keep <- j <= N
-i <- i[keep]
-j <- j[keep]
-x <- x[keep]
-#
-# Create matrix
-K <- Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(N, N), symmetric = TRUE)
-message('Smoothing matrix size: ', object.size(K))
-# K[1:12, 1:12]
-
-
-#
-# Normalise smoothing matrix by rows
-#
-message('Normalising smoothing matrix')
-row.sums <- Matrix::rowSums(K)
-K.norm <- Matrix::Diagonal(x = 1 / row.sums) %*% K
-sums.norm <- Matrix::rowSums(K.norm)
-stopifnot(all(abs(1 - sums.norm) < 1e-12))
+sample_n(preds, 15)
+sapply(preds, class)
 
 
 #
 # Smooth predictions
 #
-message('Smoothing predictions')
-logistic <- function(x) 1/(1+exp(-x))
-logit <- function(p) log(p/(1-p))
-predictions <- preds$prediction
-if (log.transform) {
-  predictions <- logit(predictions)
-}
-predictions.smoothed <- K.norm %*% predictions
-if (log.transform) {
-  predictions.smoothed <- logistic(predictions.smoothed)
-}
+predictions.smoothed <- smooth.predictions(preds, length.scale, max.width, log.transform)
 
 
 #
