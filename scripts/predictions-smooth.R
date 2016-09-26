@@ -2,19 +2,19 @@
 #!
 #! sbatch directives begin here ###############################
 #!
-#SBATCH -p mrc-bsu-sand                 # Partition
-#SBATCH -J PREDSMOOTH                   # Name of the job
-#SBATCH -A MRC-BSU-SL2                  # Which project should be charged
-#SBATCH --nodes=1                       # How many whole nodes should be allocated?
-#SBATCH --ntasks=1                      # How many (MPI) tasks will there be in total? (<= nodes*16)
-#SBATCH --cpus-per-task=1               # How many CPUs will be used per task
-#SBATCH --mem=7680                      # How many MB each node is allocated
-#SBATCH --time=06:00:00                 # How much wallclock time will be required?
-#SBATCH -o pred-smooth-%j.out           # stdout
-#SBATCH -e pred-smooth-%j.out           # stderr
-#SBATCH --mail-type=FAIL                # What types of email messages do you wish to receive?
-##SBATCH --no-requeue                   # Uncomment this to prevent the job from being requeued (e.g. if
-                                        # interrupted by node failure or system downtime):
+#SBATCH -p mrc-bsu-sand                    # Partition
+#SBATCH -J PREDSMOOTH                      # Name of the job
+#SBATCH -A MRC-BSU-SL2                     # Which project should be charged
+#SBATCH --nodes=1                          # How many whole nodes should be allocated?
+#SBATCH --ntasks=1                         # How many (MPI) tasks will there be in total? (<= nodes*16)
+#SBATCH --cpus-per-task=1                  # How many CPUs will be used per task
+#SBATCH --mem=30400                        # How many MB each node is allocated
+#SBATCH --time=06:00:00                    # How much wallclock time will be required?
+#SBATCH -o pred-smooth/pred-smooth-%j.out  # stdout
+#SBATCH -e pred-smooth/pred-smooth-%j.out  # stderr
+#SBATCH --mail-type=FAIL                   # What types of email messages do you wish to receive?
+##SBATCH --no-requeue                      # Uncomment this to prevent the job from being requeued (e.g. if
+                                           # interrupted by node failure or system downtime):
 "Usage: predictions-smooth.R [options] IN OUT
 
 Options:
@@ -40,6 +40,8 @@ options(warn = 2)
 # Parse options
 #
 # .args <- "--logodds ../Data/Predictions/predictions.xgboost.chrfold.EGR1.H1-hESC.DNase_Known_KnownWell_DREME_DREMEWell.tsv ../slurm/smoothed-predictions.tsv"
+# .args <- '--length-scale=10 --width=5 ../Data/Predictions/predictions.xgboost.remove.FOXA2.HepG2.DNase_Known_KnownWell_DREME_DREMEWell.tsv ../Data/Predictions/predictions.xgboost.L=10-LO=no-W=5.FOXA2.HepG2.DNase_Known_KnownWell_DREME_DREMEWell.tsv'
+# options(error = recover)
 if (! exists(".args")) .args <- commandArgs(TRUE)  # Check if we have manually set arguments for debugging
 opts <- docopt::docopt(doc, args = .args)
 print(opts)

@@ -1,0 +1,37 @@
+#!/bin/bash -e
+#
+# Perform a grid search on prediction smoothing parameters.
+#
+USAGE="USAGE: $0 <input tag> <input files>..."
+INTAG=${1:?$USAGE}
+shift
+
+INFILES="$@"
+
+LENGTHSCALES="10 50 200"
+LOGODDS="yes no"
+WIDTHS="5 10"
+
+for L in $LENGTHSCALES
+do
+    for LO in $LOGODDS
+    do
+        if [ "yes" == $LO ]
+        then
+            LOARG="--logodds"
+        else
+            LOARG=""
+        fi
+        for W in $WIDTHS
+        do
+            ARGS="--length-scale=$L $LOARG --width=$W"
+            # echo "$ARGS"
+            TAG="L=$L-LO=$LO-W=$W"
+            for INFILE in $INFILES
+            do
+                OUTFILE=$(echo $INFILE | sed "s/$INTAG/$TAG/")
+                [ -s $OUTFILE ] || sbatch ../scripts/predictions-smooth.R $ARGS $INFILE $OUTFILE
+            done
+        done
+    done
+done

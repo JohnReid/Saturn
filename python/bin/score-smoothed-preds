@@ -1,0 +1,14 @@
+#!/bin/bash -e
+
+sbatch score-predictions -t scores-L=10-LO=yes-W=5.tsv ../Data/Predictions/predictions.*L=10-LO=yes-W=5*.tsv
+sbatch score-predictions -t scores-L=10-LO=yes-W=10.tsv ../Data/Predictions/predictions.*L=10-LO=yes-W=10*.tsv
+sbatch score-predictions -t scores-L=10-LO=no-W=10.tsv ../Data/Predictions/predictions.*L=10-LO=no-W=10*.tsv
+sbatch score-predictions -t scores-L=10-LO=no-W=5.tsv ../Data/Predictions/predictions.*L=10-LO=no-W=5*.tsv
+sbatch score-predictions -t scores-L=50-LO=yes-W=5.tsv ../Data/Predictions/predictions.*L=50-LO=yes-W=5*.tsv
+sbatch score-predictions -t scores-L=50-LO=no-W=5.tsv ../Data/Predictions/predictions.*L=50-LO=no-W=5*.tsv
+sbatch score-predictions -t scores-L=50-LO=yes-W=10.tsv ../Data/Predictions/predictions.*L=50-LO=yes-W=10*.tsv
+sbatch score-predictions -t scores-L=50-LO=no-W=10.tsv ../Data/Predictions/predictions.*L=50-LO=no-W=10*.tsv
+sbatch score-predictions -t scores-L=200-LO=yes-W=5.tsv ../Data/Predictions/predictions.*L=200-LO=yes-W=5*.tsv
+sbatch score-predictions -t scores-L=200-LO=no-W=5.tsv ../Data/Predictions/predictions.*L=200-LO=no-W=5*.tsv
+sbatch score-predictions -t scores-L=200-LO=no-W=10.tsv ../Data/Predictions/predictions.*L=200-LO=no-W=10*.tsv
+sbatch score-predictions -t scores-L=200-LO=yes-W=10.tsv ../Data/Predictions/predictions.*L=200-LO=yes-W=10*.tsv

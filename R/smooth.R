@@ -107,4 +107,6 @@ smooth.predictions <- function(preds, length.scale, max.width, log.transform = T
   if (log.transform) {
     predictions.smoothed <- logistic(predictions.smoothed)
   }
+  stopifnot (! is.null(predictions.smoothed))
+  return(predictions.smoothed)
 }
