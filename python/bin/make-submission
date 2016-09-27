@@ -7,6 +7,7 @@ doc = """Usage: make-submissions SUBMISSIONFILES..."""
 from docopt import docopt
 import synapseclient
 from synapseclient import File
+import os
 
 #
 # Parse options
@@ -28,13 +29,25 @@ print('Getting project.')
 project = syn.get('syn7122732')
 
 #
-# Get the object representing the evaluation queue
+# Get the objects representing the evaluation queues
 #
-print('Getting evaluation queue.')
-evaluation = syn.getEvaluation(7071644)
+print('Getting evaluation queues.')
+ladderq = syn.getEvaluation(7071644)
+submitq = syn.getEvaluation(7212779)
 
 
 for filename in submission_files:
+    #
+    # Get queue for this file
+    #
+    basename = os.path.basename(filename)
+    if ('L' == basename[0]):
+        queue = ladderq
+    elif ('F' == basename[0]):
+        queue = submitq
+    else:
+        raise RuntimeError('Filename must start with "F" or "L"')
+
     #
     # Upload our file
     #
@@ -46,4 +59,4 @@ for filename in submission_files:
     # Submit the file to the evaluation queue
     #
     print('Submitting: {}'.format(filename))
-    submission = syn.submit(evaluation, upload_file, name='Submission', team='Saturn')
+    submission = syn.submit(queue, upload_file, name='Submission', team='Saturn')
