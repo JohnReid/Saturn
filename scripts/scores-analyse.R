@@ -47,8 +47,10 @@ parse.filename <- function(file.name) {
         c(s[[4]], s[[5]], s[[6]], s[[2]], s[[3]])
       } else if (6 == length(s)) {
         c(s[[3]], s[[4]], s[[5]], s[[2]], '')
-      } else {
+      } else if (5 == length(s)) {
         c(s[[2]], s[[3]], s[[4]], 'glmnet', '')
+      } else {
+        stop(s)
       }
     })
   do.call(rbind, .list)
@@ -126,27 +128,31 @@ melt(
 #
 # Plot an analysis of each tag
 #
+rotate.x.labels <- theme(axis.text.x = element_text(angle = 90, hjust = 1))
 for (tag in tag.names) {
   ggplot(scores.w.tags, aes(x = TF, y = AUPRC)) +
     geom_boxplot(aes_string(fill = tag)) +
     # geom_jitter(height = 0) +
     labs(x = 'TF') +
     scale_fill_few() +
-    theme_few()
+    theme_few() +
+    rotate.x.labels
   save.plot(str_c('AUPRC-by-TF-', tag))
   ggplot(scores.w.tags, aes(x = TF, y = recall_10)) +
     geom_boxplot(aes_string(fill = tag)) +
     # geom_jitter(height = 0) +
     labs(x = 'TF') +
     scale_fill_few() +
-    theme_few()
+    theme_few() +
+    rotate.x.labels
   save.plot(str_c('recall-10-by-TF-', tag))
   ggplot(scores.w.tags, aes(x = TF, y = recall_50)) +
     geom_boxplot(aes_string(fill = tag)) +
     # geom_jitter(height = 0) +
     labs(x = 'TF') +
     scale_fill_few() +
-    theme_few()
+    theme_few() +
+    rotate.x.labels
   save.plot(str_c('recall-50-by-TF-', tag))
 }
 
@@ -158,7 +164,8 @@ for (tag in tag.names) {
 # ggplot(scores, aes(x = AUROC, y = AUPRC, label = TF, fill = interaction(motif.tags, method, tag))) +
   # geom_label() +
   # scale_fill_few() +
-  # theme_few()
+  # theme_few() +
+  # rotate.x.labels
 # save.plot('AUROC-AUPRC')
 # AUPRC by TF
 ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, fill = interaction(motif.tags, method, tag))) +
@@ -166,7 +173,8 @@ ggplot(scores.filtered, aes(x = reorder(TF, AUPRC, FUN = median), y = AUPRC, fil
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
   # scale_fill_few() +
-  theme_few()
+  theme_few() +
+  rotate.x.labels
 save.plot('AUPRC-by-TF')
 # AUPRC by cell
 ggplot(scores.filtered, aes(x = reorder(cell, AUPRC, FUN = median), y = AUPRC, fill = interaction(motif.tags, method, tag))) +
@@ -174,7 +182,8 @@ ggplot(scores.filtered, aes(x = reorder(cell, AUPRC, FUN = median), y = AUPRC, f
   # geom_jitter(height = 0) +
   labs(x = 'cell') +
   # scale_fill_few() +
-  theme_few()
+  theme_few() +
+  rotate.x.labels
 save.plot('AUPRC-by-cell')
 # recall at 10% FDR by TF
 ggplot(scores.filtered, aes(x = reorder(TF, recall_10, FUN = median), y = recall_10, fill = interaction(motif.tags, method, tag))) +
@@ -182,7 +191,8 @@ ggplot(scores.filtered, aes(x = reorder(TF, recall_10, FUN = median), y = recall
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
   # scale_fill_few() +
-  theme_few()
+  theme_few() +
+  rotate.x.labels
 save.plot('recall-10-by-TF')
 # recall at 50% FDR by TF
 ggplot(scores.filtered, aes(x = reorder(TF, recall_50, FUN = median), y = recall_50, fill = interaction(motif.tags, method, tag))) +
@@ -190,5 +200,6 @@ ggplot(scores.filtered, aes(x = reorder(TF, recall_50, FUN = median), y = recall
   # geom_jitter(height = 0) +
   labs(x = 'TF') +
   # scale_fill_few() +
-  theme_few()
+  theme_few() +
+  rotate.x.labels
 save.plot('recall-50-by-TF')
