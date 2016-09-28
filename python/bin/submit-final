@@ -1,0 +1,18 @@
+#!/bin/bash -ex
+
+FEATS="-f DNase -f Known -f KnownWell -f DREME -f DREMEWell"
+CMD="sbatch ../scripts/predict.R --tag=submit $FEATS -r --max-boosting=5555"
+OMP_NUM_THREADS=16 $CMD ATF2  HepG2
+OMP_NUM_THREADS=16 $CMD CTCF  induced_pluripotent_stem_cell
+OMP_NUM_THREADS=16 $CMD CTCF  PC-3
+OMP_NUM_THREADS=16 $CMD E2F1  K562
+OMP_NUM_THREADS=16 $CMD EGR1  liver
+OMP_NUM_THREADS=16 $CMD FOXA1 liver
+OMP_NUM_THREADS=16 $CMD FOXA2 liver
+OMP_NUM_THREADS=16 $CMD GABPA liver
+OMP_NUM_THREADS=16 $CMD HNF4A liver
+OMP_NUM_THREADS=16 $CMD JUND  liver
+OMP_NUM_THREADS=16 $CMD MAX   liver
+OMP_NUM_THREADS=16 $CMD NANOG induced_pluripotent_stem_cell
+OMP_NUM_THREADS=16 $CMD REST  liver
+OMP_NUM_THREADS=16 $CMD TAF1  liver
