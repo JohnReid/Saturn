@@ -38,6 +38,12 @@ binding.levels <- c('U', 'A', 'B')
 
 hg19 <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
 
+#
+# Regexes to extract TF and cell from filename
+#
+tf.regex <- stringr::str_c(tf.levels, collapse = '|')
+cell.regex <- stringr::str_c(cell.levels, collapse = '|')
+
 
 # Convert from Rle to one column matrix
 #

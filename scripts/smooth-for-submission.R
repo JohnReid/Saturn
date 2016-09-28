@@ -8,7 +8,7 @@
 #SBATCH --nodes=1                          # How many whole nodes should be allocated?
 #SBATCH --ntasks=1                         # How many (MPI) tasks will there be in total? (<= nodes*16)
 #SBATCH --cpus-per-task=1                  # How many CPUs will be used per task
-#SBATCH --mem=30400                        # How many MB each node is allocated
+#SBATCH --mem=60800                        # How many MB each node is allocated
 #SBATCH --time=06:00:00                    # How much wallclock time will be required?
 #SBATCH -o sub-smooth/sub-smooth-%j.out    # stdout
 #SBATCH -e sub-smooth/sub-smooth-%j.out    # stderr
