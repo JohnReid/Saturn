@@ -14,7 +14,7 @@ options(warn = 2)
 #
 # Load packages
 #
-devtools::load_all()
+# devtools::load_all()
 library(ggplot2)
 library(ggthemes)
 library(stringr)
@@ -118,13 +118,9 @@ has.most <- tag.lengths == most.tags
 tags.w.most <- do.call(rbind, parsed.tags[has.most])
 scores.w.tags <- cbind(scores.filtered[has.most,], tags.w.most)
 tag.names <- colnames(tags.w.most)
-#
-# Melt into format for plotting
-#
-melt(
-  scores.w.tags,
-  id.vars = c(c('TF', 'cell'), tag.names),
-  measure.vars = c('AUPRC'))
+if ("" == tag.names) {
+  tag.names <- NULL
+}
 #
 # Plot an analysis of each tag
 #
