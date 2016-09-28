@@ -18,6 +18,7 @@
 "Usage: predictions-smooth.R [options] IN OUT
 
 Options:
+  --override=TF                  Use parameters for TF defined in R package [default: ""]
   -l --length-scale=LENGTHSCALE  Use LENGTHSCALE [default: 50]
   --logodds                      Smooth log-odds instead of probabilities [default: FALSE]
   --width=MAXWIDTH               Width of kernel in units of regions [default: 20]" -> doc
@@ -47,14 +48,50 @@ opts <- docopt::docopt(doc, args = .args)
 print(opts)
 in.path <- opts$IN
 out.path <- opts$OUT
+override <- opts[['override']]
 log.transform <- as.logical(opts[['logodds']])
 max.width <- as.integer(opts[['width']])
 length.scale <- as.numeric(opts[['length-scale']])
 
 
 #
+# Configure parameters
+#
+if ("" != override) {
+  message('Overriding with parameters for TF: ', override)
+  .params <- filter(smoothing.params, TF == override)
+  stopifnot(1 == length(.params))
+  log.transform <- as.logical(.params$LO)
+  length.scale <- as.numeric(.params$L)
+  max.width <- as.integer(.params$W)
+  actually.smooth <- as.logical(.params$smooth)
+} else {
+  actually.smooth <- TRUE
+}
+
+
+#
+# Are we actually going to do any smoothing?
+#
+if (! actually.smooth) {
+  message('No need to smooth, will just copy predictions unchanged')
+  file.copy(in.path, out.path)
+  quit(save = "no")
+}
+
+
+#
+# Show parameters
+#
+message('Log transform: ', log.transform)
+message('Length scale: ', length.scale)
+message('Maximum width: ', max.width)
+
+
+#
 # Load predictions
 #
+message('Loading predictions from: ', in.path)
 preds <- data.table::fread(
   in.path,
   col.names = c('chrom', 'start', 'end', 'prediction', 'bound'))
@@ -71,6 +108,6 @@ predictions.smoothed <- smooth.predictions(preds, length.scale, max.width, log.t
 #
 # Write predictions
 #
-message('Writing predictions')
+message('Writing predictions to: ', out.path)
 preds$prediction <- as.vector(predictions.smoothed)
 data.table::fwrite(preds, out.path, sep = '\t', col.names = FALSE)
