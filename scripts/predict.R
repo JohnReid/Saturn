@@ -135,7 +135,7 @@ message('Validation cell split: ', as.character(valid.split))
 # Which cells do we have data for?
 #
 if ('ladder' == valid.split) {
-  tf.cells <- tf.cells %>% filter(split != 'submit')
+  tf.cells <- tf.cells %>% filter(split != 'submit', split != 'ladder' | cell == cell.valid)
 } else if ('submit' == valid.split) {
   # Make sure to remove other cells that are also submission targets (e.g. for CTCTF)
   tf.cells <- tf.cells %>% filter(split != 'ladder', split != 'submit' | cell == cell.valid)
