@@ -58,13 +58,6 @@ region.similarity <- function(preds, length.scale) {
 #' Smooth the predictions
 #'
 smooth.predictions <- function(preds, length.scale, max.width, log.transform = TRUE) {
-  message('Smoothing predictions')
-  N <- nrow(preds)
-  message('# predictions: ', N)
-  message('Length scale: ', length.scale)
-  message('Maxmum width: ', max.width)
-  message('Logistic transform: ', log.transform)
-
   #
   # Distance between two rows
   #
@@ -74,6 +67,7 @@ smooth.predictions <- function(preds, length.scale, max.width, log.transform = T
   # Create sparse symmetric banded similarity matrix
   #
   # Calculate non-zero indices and values
+  N <- nrow(preds)
   i <- as.vector(sapply(1:N, function(i) rep(i, max.width)))
   j <- rep(1:max.width, N) + i - 1
   x <- row.similarity(i, j)
@@ -87,14 +81,17 @@ smooth.predictions <- function(preds, length.scale, max.width, log.transform = T
   #
   # Create matrix
   K <- Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(N, N), symmetric = TRUE)
+  # object.size(K) / dim(K)[1] / dim(K)[2]
+  # class(K)
 
   #
   # Normalise smoothing matrix by rows
   #
   row.sums <- Matrix::rowSums(K)
-  K.norm <- Matrix::Diagonal(x = 1 / row.sums) %*% K
-  sums.norm <- Matrix::rowSums(K.norm)
-  stopifnot(all(abs(1 - sums.norm) < 1e-12))
+  K <- Matrix::Diagonal(x = 1 / row.sums) %*% K
+  # stopifnot(all(abs(1 - Matrix::rowSums(K)) < 1e-12))
+  # object.size(K) / dim(K)[1] / dim(K)[2]
+  # class(K)
 
   #
   # Smooth predictions
@@ -103,10 +100,15 @@ smooth.predictions <- function(preds, length.scale, max.width, log.transform = T
   if (log.transform) {
     predictions <- logit(predictions)
   }
-  predictions.smoothed <- K.norm %*% predictions
+  predictions.smoothed <- as.vector(K %*% predictions)
   if (log.transform) {
     predictions.smoothed <- logistic(predictions.smoothed)
   }
+  class(predictions.smoothed)
+
+  #
+  # Return result
+  #
   stopifnot (! is.null(predictions.smoothed))
   return(predictions.smoothed)
 }

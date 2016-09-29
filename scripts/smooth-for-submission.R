@@ -35,8 +35,8 @@ options(warn = 2)
 #
 # Parse options
 #
-# .args <- "--logodds ../Data/Predictions/predictions.xgboost.chrfold.EGR1.H1-hESC.DNase_Known_KnownWell_DREME_DREMEWell.tsv ../slurm/smoothed-predictions.tsv"
-# .args <- '--length-scale=10 --width=5 ../Data/Predictions/predictions.xgboost.remove.FOXA2.HepG2.DNase_Known_KnownWell_DREME_DREMEWell.tsv ../Data/Predictions/predictions.xgboost.L=10-LO=no-W=5.FOXA2.HepG2.DNase_Known_KnownWell_DREME_DREMEWell.tsv'
+# .args <- "../Data/Predictions/predictions.xgboost.chrfold.EGR1.H1-hESC.DNase_Known_KnownWell_DREME_DREMEWell.tsv"
+# .args <- '../Data/Predictions/predictions.xgboost.remove.FOXA2.HepG2.DNase_Known_KnownWell_DREME_DREMEWell.tsv'
 # options(error = recover)
 if (! exists(".args")) .args <- commandArgs(TRUE)  # Check if we have manually set arguments for debugging
 opts <- docopt::docopt(doc, args = .args)
@@ -71,6 +71,10 @@ for (in.path in opts$IN) {
   }
   out.path = str_c(saturn.data(), '/Submissions/', label, '.', tf.pred, '.', cell.pred, '.tab')
   message('Output: ', out.path)
+  if (file.exists(str_c(out.path, '.gz'))) {
+    message('Output file already exists, exiting: ', out.path)
+    quit(save = 'no')
+  }
 
 
   #
@@ -87,6 +91,7 @@ for (in.path in opts$IN) {
   message('Maximum width: ', max.width)
 
 
+
   #
   # Load predictions
   #
@@ -95,6 +100,8 @@ for (in.path in opts$IN) {
   col.names = c('chrom', 'start', 'end', 'prediction', 'bound')
   colnames(preds) <- col.names[1:ncol(preds)]
   # sample_n(preds, 15)
+  N <- nrow(preds)
+  message('# predictions: ', N)
 
 
   #
@@ -104,7 +111,20 @@ for (in.path in opts$IN) {
     message('No need to smooth, will just copy predictions unchanged')
     predictions.smoothed <- preds$prediction
   } else {
-    predictions.smoothed <- smooth.predictions(preds, length.scale, max.width, log.transform)
+    #
+    # Smooth by chromosome
+    #
+    smooth.chr <- function(.chrom) {
+      message('Smoothing chromosome: ', .chrom)
+      smooth.predictions(filter(preds, chrom == .chrom), length.scale, max.width, log.transform)
+    }
+    # Get the chromosomes in the predictions
+    chrs <- unique(preds$chrom)
+    print(chrs)
+    # Smooth each chromosome's predictions
+    smoothed.by.chr <- lapply(chrs, smooth.chr)
+    # Concatenate them together (hopefully in same order!)
+    predictions.smoothed <- do.call(c, smoothed.by.chr)
   }
 
 
@@ -112,7 +132,7 @@ for (in.path in opts$IN) {
   # Write predictions
   #
   message('Writing predictions to: ', out.path)
-  preds$prediction <- as.vector(predictions.smoothed)
+  preds$prediction <- predictions.smoothed
   data.table::fwrite(preds, out.path, sep = '\t', col.names = FALSE)
 
 
