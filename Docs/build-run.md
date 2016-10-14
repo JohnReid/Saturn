@@ -61,10 +61,6 @@ Merge the DNase sequencing reads for each cell type by
 
     merge-dnase <cell type>
 
-Install Wellington.
-
-    pip install pyDNase
-
 Run wellington on the relaxed peaks for each cell type by
 
     run-wellington <cell type> relaxed
@@ -108,7 +104,7 @@ footprints for each cell type.
 
     scripts/feature-scan.R \
         --cell=<cell type 1> \
-        --cell=<cell type2> \
+        --cell=<cell type 2> \
         ... \
         --wellington \
         $KNOWNMOTIFSDIR KnownWell
@@ -145,7 +141,7 @@ footprints for each cell type relevant for each TF.
         $SATURNDIR/Data/ChIPseq/seqs/DREME-<TF>
         DREMEWell
 
-Now all the features should be ready for prediction
+Now all the features should be ready for prediction.
 
 
 ## Predict

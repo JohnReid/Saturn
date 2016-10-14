@@ -28,9 +28,8 @@ the TFs in the challenge from the following public motif databases:
 - Direct and inferred motifs for *Homo sapiens* from [@weirauch_determination_2014]
 
 We then perfomed a genome-wide scan of all these motifs using the `STEME`
-[@reid_steme:_2014] software to generate a set of putative binding sites. These
-were summarised as region-level features by the maximum of their log-odds ratio
-(Bayes factor?).
+software [@reid_steme:_2014] to generate a set of putative binding sites. These
+were summarised as region-level features by the maximum of their log-odds ratio.
 
 We used a discriminative motif finder, `DREME` [@bailey_dreme:_2011], to find
 motifs that discriminated between the bound sequences and those that were
