@@ -6,4 +6,6 @@ BASE=$(basename "$MD" .md)
 OUT="$BASE.pdf"
 pandoc \
      --filter pandoc-citeproc \
+     -V links-as-notes=true \
+     "$@" \
      $MD -o $OUT

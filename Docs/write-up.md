@@ -7,10 +7,15 @@ bibliography: ENCODE.bib
 
 We used `xgboost` [@chen_xgboost:_2016] to fit a gradient tree boosting model
 to a set of features derived from the called DNase peaks and a genome wide scan
-for known motifs and *de novo* motifs.
+for known motifs and *de novo* motifs. We used the DGF method `Wellington` to
+create new features of just those binding sites overlapping a footprint. We
+found that using a kernel smoother on our predictions increased our
+cross-validation performance.
 
 
 ## Features
+
+The most predictive feature we used were the p-values of the relaxed DNase peaks.
 
 We compiled a list of motifs that represented the binding specificities of all
 the TFs in the challenge from the following public motif databases:
@@ -35,7 +40,8 @@ region-level features on a per-TF basis.
 
 We used `Wellington` [@piper_wellington:_2013], a DNase footprint detection
 algorithm to determine TF binding footprints in the DNase peaks. We used these
-to filter both the known motif binding sites and those the *de novo* sites.
+to filter both the known motif binding sites and those the *de novo* sites. We
+included both the filtered binding sites and the unfiltered sites as features.
 
 
 ## Predictions
