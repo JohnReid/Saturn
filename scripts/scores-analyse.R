@@ -14,7 +14,7 @@ options(warn = 2)
 #
 # Load packages
 #
-# devtools::load_all()
+devtools::load_all()
 library(ggplot2)
 library(ggthemes)
 library(stringr)

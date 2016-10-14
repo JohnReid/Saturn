@@ -1,0 +1,9 @@
+#!/bin/bash -e
+USAGE="$0 <markdown>"
+MD=${1?:$USAGE}
+shift
+BASE=$(basename "$MD" .md)
+OUT="$BASE.pdf"
+pandoc \
+     --filter pandoc-citeproc \
+     $MD -o $OUT
