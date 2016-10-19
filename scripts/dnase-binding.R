@@ -55,6 +55,7 @@ analyse.tf <- function(tf.meta) {
         sum(is.bound & zero.dnase) / sum(is.bound),
         sum(is.ambig & zero.dnase) / sum(is.ambig),
         sum(is.unbnd & zero.dnase) / sum(is.unbnd)),
+      total = c(sum(is.bound), sum(is.ambig), sum(is.unbnd)),
       mean = by.bound(mean),
       sd = by.bound(sd))
   }
@@ -62,12 +63,49 @@ analyse.tf <- function(tf.meta) {
 }
 dnase.by.bound <- tfs %>% filter('train' == split) %>% group_by(TF) %>% do(analyse.tf(.)) %>% ungroup()
 dnase.by.bound
-# devtools::use_data(dnase.by.bound)
+# devtools::use_data(dnase.by.bound, overwrite = TRUE)
 
+#
+# Plot how the proportion of zero DNase regions varies as function of bound status by TF
+#
 ggplot(dnase.by.bound, aes(x = bound, y = prop.zero.dnase, color = bound, fill = bound)) +
   # geom_boxplot() +
-  geom_jitter(height = 0) +
+  geom_jitter(height = 0, size = 2) +
   facet_wrap(~ TF, nrow = 4) +
   scale_fill_few() +
   theme_few()
 ggsave(file.path('..', 'Plots', 'dnase-by-bound.pdf'))
+
+#
+# Plot the proportion bound by TF
+#
+ggplot(dnase.by.bound, aes(x = bound, y = total, color = bound, fill = bound)) +
+  # geom_boxplot() +
+  # geom_jitter(height = 0, size = 2) +
+  geom_bar(stat = "identity") +
+  facet_grid(TF ~ cell) +
+  scale_fill_few() +
+  scale_y_log10() +
+  theme_few()
+  # theme(
+    # axis.text.x = element_text(angle = 90, hjust = 1),
+    # axis.text.y = element_text(angle = 90, hjust = 1))
+ggsave(file.path('..', 'Plots', 'bound-totals.pdf'))
+
+totals <-
+  dnase.by.bound %>%
+  dcast(TF + cell ~ bound, value.var = 'total') %>%
+  mutate(
+    bound.to.unbnd = B / (B + U),
+    bound.to.ambig = B / (B + A))
+totals
+ggplot(totals, aes(x = TF, y = cell, fill = log10(bound.to.unbnd))) +
+    geom_tile(colour='white') +
+    theme_tufte() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
+ggsave(file.path('..', 'Plots', 'bound-to-unbnd.pdf'))
+ggplot(totals, aes(x = TF, y = cell, fill = log10(bound.to.ambig))) +
+    geom_tile(colour='white') +
+    theme_tufte() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
+ggsave(file.path('..', 'Plots', 'bound-to-ambig.pdf'))
