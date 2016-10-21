@@ -92,12 +92,15 @@ ggplot(dnase.by.bound, aes(x = bound, y = total, color = bound, fill = bound)) +
     # axis.text.y = element_text(angle = 90, hjust = 1))
 ggsave(file.path('..', 'Plots', 'bound-totals.pdf'))
 
+#
+# Calculate the total number bound, ambiguous and
+#
 totals <-
   dnase.by.bound %>%
   dcast(TF + cell ~ bound, value.var = 'total') %>%
   mutate(
-    bound.to.unbnd = B / (B + U),
-    bound.to.ambig = B / (B + A))
+    bound.to.unbnd = B / U,
+    bound.to.ambig = B / A)
 totals
 ggplot(totals, aes(x = TF, y = cell, fill = log10(bound.to.unbnd))) +
     geom_tile(colour='white') +
