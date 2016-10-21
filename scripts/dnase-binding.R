@@ -106,9 +106,13 @@ ggplot(totals, aes(x = TF, y = cell, fill = log10(bound.to.unbnd))) +
     geom_tile(colour='white') +
     theme_tufte() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
-ggsave(file.path('..', 'Plots', 'bound-to-unbnd.pdf'))
+ggsave(
+  file.path('..', 'Plots', 'bound-to-unbnd.pdf'),
+  width = 6, height = 4, units = 'in')
 ggplot(totals, aes(x = TF, y = cell, fill = log10(bound.to.ambig))) +
     geom_tile(colour='white') +
     theme_tufte() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=.4))
-ggsave(file.path('..', 'Plots', 'bound-to-ambig.pdf'))
+ggsave(
+  file.path('..', 'Plots', 'bound-to-ambig.pdf'),
+  width = 6, height = 4, units = 'in')
