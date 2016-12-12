@@ -517,7 +517,7 @@ Supplementary information: Supplemental data are available at Bioinformatics onl
 }
 
 @thesis{galip_gurkan_yardimci_tracking_2014,
-  title = {Tracking {{Transcription Factors}} on the {{Genome}} by their {{DNase}}-Seq {{Footprints}}},
+  title = {Tracking {{Transcription Factors}} on the {{Genome}} by Their {{DNase}}-Seq {{Footprints}}},
   url = {http://dukespace.lib.duke.edu/dspace/bitstream/handle/10161/9084/Yardimci_duke_0066D_12595.pdf?sequence=1},
   abstract = {Transcription factors control numerous vital processes in the cell through their
 ability to control gene expression. Dysfunctional regulation by transcription factors lead
@@ -667,6 +667,28 @@ View full text},
   file = {He_Garcia_2009_Learning from Imbalanced Data.pdf:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/RBR82QV6/He_Garcia_2009_Learning from Imbalanced Data.pdf:application/pdf;IEEE Xplore Abstract Record:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/3H77WG8H/5128907.html:text/html}
 }
 
+@article{quang_danq:_2016,
+  title = {{{DanQ}}: A Hybrid Convolutional and Recurrent Deep Neural Network for Quantifying the Function of {{DNA}} Sequences},
+  volume = {44},
+  issn = {0305-1048},
+  url = {http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4914104/},
+  doi = {10.1093/nar/gkw226},
+  shorttitle = {{{DanQ}}},
+  abstract = {Modeling the properties and functions of DNA sequences is an important, but challenging task in the broad field of genomics. This task is particularly difficult for non-coding DNA, the vast majority of which is still poorly understood in terms of function. A powerful predictive model for the function of non-coding DNA can have enormous benefit for both basic science and translational research because over 98\% of the human genome is non-coding and 93\% of disease-associated variants lie in these regions. To address this need, we propose DanQ, a novel hybrid convolutional and bi-directional long short-term memory recurrent neural network framework for predicting non-coding function de novo from sequence. In the DanQ model, the convolution layer captures regulatory motifs, while the recurrent layer captures long-term dependencies between the motifs in order to learn a regulatory ‘grammar’ to improve predictions. DanQ improves considerably upon other models across several metrics. For some regulatory markers, DanQ can achieve over a 50\% relative improvement in the area under the precision-recall curve metric compared to related models. We have made the source code available at the github repository http://github.com/uci-cbcl/DanQ.},
+  timestamp = {2016-10-05T09:37:05Z},
+  number = {11},
+  journaltitle = {Nucleic Acids Research},
+  shortjournal = {Nucleic Acids Res},
+  author = {Quang, Daniel and Xie, Xiaohui},
+  urldate = {2016-10-05},
+  date = {2016-06-20},
+  pages = {e107},
+  file = {gkw226.pdf:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/G7952CS4/gkw226.pdf:application/pdf},
+  eprinttype = {pmid},
+  eprint = {27084946},
+  pmcid = {PMC4914104}
+}
+
 @article{pachkov_swissregulon_2013,
   title = {{{SwissRegulon}}, a Database of Genome-Wide Annotations of Regulatory Sites: Recent Updates},
   volume = {41},
@@ -746,6 +768,69 @@ View full text},
   pages = {539--550},
   keywords = {BalanceCascade,class-imbalance learning,data mining,EasyEnsemble,ensemble learning,F-measure,G-mean,learning (artificial intelligence),machine learning,undersampling},
   file = {Liu et al_2009_Exploratory Undersampling for Class-Imbalance Learning.pdf:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/SAJN43KK/Liu et al_2009_Exploratory Undersampling for Class-Imbalance Learning.pdf:application/pdf;IEEE Xplore Abstract Record:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/SW4TGG3V/4717268.html:text/html}
+}
+
+@article{velde_lr-dnase:_2016,
+  title = {{{LR}}-{{DNase}}: {{Predicting TF}} Binding from {{DNase}}-Seq Data},
+  rights = {© 2016, Posted by Cold Spring Harbor Laboratory Press. The copyright holder for this pre-print is the author. All rights reserved. The material may not be redistributed, re-used or adapted without the author's permission.},
+  url = {http://biorxiv.org/content/early/2016/10/24/082594},
+  doi = {10.1101/082594},
+  shorttitle = {{{LR}}-{{DNase}}},
+  abstract = {Transcription factors play a key role in the regulation of gene expression. Hypersensitivity to DNase I cleavage has long been used to gauge the accessibility of genomic DNA for transcription factor binding and as an indicator of regulatory genomic locations. An increasing amount of ChIP-seq data on a large number of TFs is being generated, mostly in a small number of cell types. DNase-seq data are being produced for hundreds of cell types. We aimed to develop a computational method that could combine ChIP-seq and DNase-seq data to predict TF binding sites in a wide variety of cell types. We trained and tested a logistic regression model, called LR-DNase, to predict binding sites for a specific TF using seven features derived from DNase-seq and genomic sequence. We calculated the area under the precision-recall curve at a false discovery rate cutoff of 0.5 for the LR-DNase model, a number of logistic regression models with fewer features, and several existing state-of-the-art TF binding prediction methods. The LR-DNase model outperformed existing unsupervised and supervised methods. Additionally, for many TFs, a model that uses only two features, DNase-seq reads and motif score, was sufficient to match the performance of the best existing methods.},
+  timestamp = {2016-12-08T14:08:52Z},
+  langid = {english},
+  journaltitle = {bioRxiv},
+  author = {van der Velde, Arjan G. and Purcaro, Michael and Noble, William Stafford and Weng, Zhiping},
+  urldate = {2016-12-08},
+  date = {2016-10-24},
+  pages = {082594},
+  file = {Velde et al_2016_LR-DNase.pdf:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/NAH9RMGS/Velde et al_2016_LR-DNase.pdf:application/pdf;Snapshot:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/WTWISZC3/082594.html:text/html}
+}
+
+@article{chen_mocap:_2016,
+  title = {Mocap: {{Large}}-Scale Inference of Transcription Factor Binding Sites from Chromatin Accessibility},
+  rights = {© 2016, Posted by Cold Spring Harbor Laboratory Press. The copyright holder for this pre-print is the author. All rights reserved. The material may not be redistributed, re-used or adapted without the author's permission.},
+  url = {http://www.biorxiv.org/content/early/2016/10/27/083998},
+  doi = {10.1101/083998},
+  shorttitle = {Mocap},
+  abstract = {Differential binding of transcription factors (TFs) at cis-regulatory loci drives the differentiation and function of diverse cellular lineages. Understanding the regulatory interactions that underlie cell fate decisions requires characterizing TF binding sites (TFBS) across multiple cell types and conditions. Techniques, e.g. ChIP-Seq can reveal genome-wide patterns of TF binding, but typically requires laborious and costly experiments for each TF-cell-type (TFCT) condition of interest. Chromosomal accessibility assays can connect accessible chromatin in one cell type to many TFs through sequence motif mapping. Such methods, however, rarely take into account that the genomic context preferred by each factor differs from TF to TF, and from cell type to cell type. To address the differences in TF behaviors, we developed Mocap, a method that integrates chromatin accessibility, motif scores, TF footprints, CpG/GC content, evolutionary conservation and other factors in an ensemble of TFCT-specific classifiers. We show that integration of genomic features, such as CpG islands improves TFBS prediction in some TFCT. Further, we describe a method for mapping new TFCT, for which no ChIP-seq data exists, onto our ensemble of classifiers and show that our cross-sample TFBS prediction method outperforms several previously described methods.},
+  timestamp = {2016-12-08T14:08:59Z},
+  langid = {english},
+  journaltitle = {bioRxiv},
+  author = {Chen, Xi and Yu, Bowen and Carriero, Nicholas and Silva, Claudio and Bonneau, Richard},
+  urldate = {2016-12-08},
+  date = {2016-10-27},
+  pages = {083998},
+  file = {Chen et al_2016_Mocap.pdf:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/VSX2PJBF/Chen et al_2016_Mocap.pdf:application/pdf;Snapshot:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/BNFFXW8K/083998.html:text/html}
+}
+
+@article{li_hyperband:_2016,
+  title = {Hyperband: {{A Novel Bandit}}-{{Based Approach}} to {{Hyperparameter Optimization}}},
+  url = {https://pdfs.semanticscholar.org/1517/8cb51c68f3e55673679ce238d6df5e052005.pdf},
+  shorttitle = {Hyperband},
+  timestamp = {2016-12-09T14:04:09Z},
+  journaltitle = {arXiv preprint arXiv:1603.06560},
+  author = {Li, Lisha and Jamieson, Kevin and DeSalvo, Giulia and Rostamizadeh, Afshin and Talwalkar, Ameet},
+  urldate = {2016-12-09},
+  date = {2016},
+  file = {1603.06560v3.pdf:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/SMQATIVA/1603.06560v3.pdf:application/pdf}
+}
+
+@article{huang_densely_2016,
+  title = {Densely {{Connected Convolutional Networks}}},
+  url = {http://arxiv.org/abs/1608.06993},
+  abstract = {Recent work has shown that convolutional networks can be substantially deeper, more accurate, and efficient to train if they contain shorter connections between layers close to the input and those close to the output. In this paper, we embrace this observation and introduce the Dense Convolutional Network (DenseNet), which connects each layer to every other layer in a feed-forward fashion. Whereas traditional convolutional networks with L layers have L connections - one between each layer and its subsequent layer - our network has L(L+1)/2 direct connections. For each layer, the feature-maps of all preceding layers are used as inputs, and its own feature-maps are used as inputs into all subsequent layers. DenseNets have several compelling advantages: they alleviate the vanishing-gradient problem, strengthen feature propagation, encourage feature reuse, and substantially reduce the number of parameters. We evaluate our proposed architecture on four highly competitive object recognition benchmark tasks (CIFAR-10, CIFAR-100, SVHN, and ImageNet). DenseNets obtain significant improvements over the state-of-the-art on most of them, whilst requiring less memory and computation to achieve high performance. Code and models are available at https://github.com/liuzhuang13/DenseNet .},
+  timestamp = {2016-12-09T14:04:35Z},
+  archivePrefix = {arXiv},
+  eprinttype = {arxiv},
+  eprint = {1608.06993},
+  primaryClass = {cs},
+  author = {Huang, Gao and Liu, Zhuang and Weinberger, Kilian Q. and van der Maaten, Laurens},
+  urldate = {2016-12-09},
+  date = {2016-08-24},
+  keywords = {Computer Science - Computer Vision and Pattern Recognition,Computer Science - Learning},
+  options = {useprefix=true},
+  file = {Huang et al_2016_Densely Connected Convolutional Networks.pdf:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/SRCAWT4T/Huang et al_2016_Densely Connected Convolutional Networks.pdf:application/pdf;arXiv.org Snapshot:/home/john/.mozilla/firefox/tpi3ht8v.default/zotero/storage/K75VDDWT/1608.html:text/html}
 }
 
 
