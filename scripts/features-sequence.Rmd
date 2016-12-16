@@ -1,0 +1,142 @@
+---
+title: "Calculate sequence features"
+author: John Reid
+output: pdf_document
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('features-sequence.Rmd')
+```
+
+```{r params, echo = FALSE}
+library(Saturn)
+# library(edgeR)
+library(Biostrings)
+library(ggplot2)
+library(ggthemes)
+library(GenomicRanges)
+knitr::opts_chunk$set(fig.width = 18, fig.height = 12)
+```
+
+Configure number of cores for parallel operations:
+```{r confParallel}
+options(mc.cores = parallel::detectCores() - 1)
+```
+
+# GC content
+
+Calculate GC content
+```{r calcGC}
+calcGC <- function(x) sum(alphabetFrequency(x, as.prob = TRUE)[c("G", "C")])
+calcRangeGC <- function(idxs) {
+    seqs <- BSgenome::getSeq(hg19, ranges.test()[idxs])
+    sapply(seqs, calcGC)
+}
+# n.try <- 100000  # Calculate for a few test regions
+n.try <- length(ranges.test())  # Calculate for all regions
+idxs.split <- splitIndices(n.try, max(options('mc.cores'), ceiling(n.try / 1000000)))
+taken <- system.time(gc <- do.call(c, mclapply(idxs.split, calcRangeGC)))
+length(ranges.test()) / n.try * taken[['elapsed']] / 60 / 60  # Over 2 hours for all regions
+```
+
+Examine GC content
+```{r examGC}
+qplot(gc)
+```
+
+
+# CpG islands
+
+Load the CpG islands
+```{r loadCpG}
+CpG <- readr::read_tsv('../Data/annotations/UCSC-CpG-islands.tsv')
+```
+
+Examine the CpG islands
+```{r examCpG}
+nrow(CpG)
+ggplot(CpG, aes(x = length, y = cpgNum)) + geom_point() + theme_few()
+ggplot(CpG, aes(x = perCpg, y = cpgNum)) + geom_point() + theme_few()
+```
+
+Create and save the Cpg island feature
+```{r featCreate}
+feat.cpg <- feature.from.ranges(make.granges(CpG, starts.in.df.are.0based = TRUE))
+saveRDS(DataFrame(CpG = feat.cpg), '../Data/Features/Sequence/CpG.rds')
+```
+
+
+# Annotations
+
+Load the annotations
+```{r loadAnno}
+system.time(anno <- rtracklayer::import('../Data/annotations/Homo_sapiens.GRCh37.82.gtf.gz'))
+?import.gff
+seqlevelsStyle(anno) <- "UCSC"
+anno <- anno[seqnames(anno) %in% seqlevels(ranges.test())]
+anno <- dropSeqlevels(anno)
+seqinfo(anno) <- seqinfo(ranges.test())
+seqinfo(anno)
+seqinfo(ranges.test())
+seqlevels(anno)
+mcols(anno)$type <- factor(mcols(anno)$type)
+names(mcols(anno))
+head(mcols(anno))
+```
+
+Examine prevalence of different annotation biotypes
+```{r examPrevalence}
+anno.df <- as.data.frame(mcols(anno))
+ggplot(anno.df, aes(x = reorder(type, type, function(x)-length(x)))) +
+    geom_bar() +
+    theme_few() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(anno.df, aes(x = reorder(gene_biotype, gene_biotype, function(x)-length(x)))) +
+    geom_bar() +
+    theme_few() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(anno.df, aes(x = reorder(transcript_biotype, transcript_biotype, function(x)-length(x)))) +
+    geom_bar() +
+    theme_few() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(anno.df, aes(x = reorder(tag, tag, function(x)-length(x)))) +
+    geom_bar() +
+    theme_few() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r featsCreate}
+transcripts <- anno[anno.df$type == 'transcript']
+TSSs <-
+    data.frame(
+        chrom = seqnames(transcripts),
+        start = ifelse('+' == strand(transcripts), start(transcripts), end(transcripts))) %>%
+    mutate(end = start)
+make.granges(TSSs)
+feature.dfs <- list(
+    exon       = anno['exon'           == anno$type],
+    CDS        = anno['CDS'            == anno$type],
+    transcript = anno['transcript'     == anno$type],
+    UTR        = anno['five_prime_utr' == anno$type | 'three_prime_utr' == anno$type],
+    codon      = anno['start_codon'    == anno$type | 'stop_codon'      == anno$type],
+    TSS        = make.granges(TSSs))
+feature.from.ranges(anno['exon' == anno$type])
+features <- lapply(feature.dfs, feature.from.ranges)
+```
+
+Save features
+```{r saveFeatures}
+saveRDS(do.call(DataFrame, features), '../Data/Features/Sequence/annotation.rds')
+```
+
+# Session information
+
+`r date()` on `r Sys.info()[["nodename"]]`
+```{r sessionInfo}
+devtools::session_info()
+largest.objects()
+```

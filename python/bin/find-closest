@@ -1,0 +1,21 @@
+#!/bin/bash -ex
+
+#
+# Run this script in the Data/annotations directory
+#
+
+#
+# Sort the TSSs if needed
+[ -f Ensembl-TSS-sorted.bed.gz ] || (
+    sortBed -i Ensembl-TSS.bed >Ensembl-TSS-sorted.bed
+    gzip Ensembl-TSS-sorted.bed
+)
+
+#
+# Find the closest TSS to each test region
+bedtools closest -d \
+    -a test_regions.blacklistfiltered.bed.gz \
+    -b Ensembl-TSS-sorted.bed.gz \
+    -t first \
+    | awk '{print $1 "\t" $2 "\t" $3 "\t" $7 "\t" $8}' \
+    | gzip - > losest-genes.bed.gz

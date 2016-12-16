@@ -1,0 +1,139 @@
+---
+title: "Process the repeats"
+author: John Reid
+output: pdf_document
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('repeats.Rmd')
+```
+
+```{r params, echo = FALSE}
+library(Saturn)
+# library(edgeR)
+library(stringr)
+library(ggplot2)
+library(ggthemes)
+library(GenomicRanges)
+knitr::opts_chunk$set(fig.width = 18, fig.height = 12)
+```
+
+
+# Load RepeatMasker Data
+
+```{r loadRepeatMasker}
+repeats <-
+    readr::read_tsv(
+        '../Data/annotations/hg19-repeats.bed.gz',
+        col_names = c('chrom', 'start', 'end', 'repeattype', 'repeatclass'))
+repeats$repeatclass <- factor(repeats$repeatclass)
+repeats$repeattype <- factor(repeats$repeattype)
+levels(repeats$repeatclass)
+```
+
+
+# Examine prevalence of repeat classes and types
+
+```{r prevClasses}
+ggplot(repeats, aes(x = reorder(repeatclass, repeatclass, function(x)-length(x)))) +
+    geom_bar() +
+    theme_few() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Choose which classes to use as features:
+```{r chooseClasses}
+repeatclasses <- levels(repeats$repeatclass)
+class.feat <- factor(
+    c(
+        'SINE/Alu',
+        'SINE/MIR',
+        'LINE/L1',
+        'LINE/L2',
+        'LTR/ERVL-MaLR',
+        'LTR/ERV1',
+        'LTR/ERVL',
+        'DNA/TcMar-Tc1',
+        'Simple_repeat',
+        'Low_complexity'),
+    levels = repeatclasses)
+```
+
+How many repeat types in each class?
+```{r countRepeatTypes}
+repeats %>%
+    filter(repeatclass %in% class.feat) %>%
+    group_by(repeatclass) %>%
+    summarise(numtypes = length(unique(repeattype)))
+```
+
+
+# Create features
+
+```{r examRepeats, echo = FALSE, eval = FALSE}
+repeats %>%
+    filter('Simple_repeat' == repeatclass, '(C)n' == repeattype) %>%
+    summarise(n = n())
+repeats %>%
+    filter('Simple_repeat' == repeatclass) %>%
+    group_by(repeattype) %>%
+    summarise(n = n())
+```
+
+```{r featsCreate}
+feature.dfs <- list(
+    LINE =
+        filter(repeats, repeatclass %in% repeatclasses[str_detect(repeatclasses, 'LINE')]),
+    DNA =
+        filter(repeats, repeatclass %in% repeatclasses[str_detect(repeatclasses, 'DNA')]),
+    LTR =
+        filter(repeats, repeatclass %in% repeatclasses[str_detect(repeatclasses, 'LTR')]),
+    SINE.MIR =
+        filter(repeats, 'SINE/MIR' == repeatclass),
+    SINE.Alu =
+        filter(repeats, 'SINE/Alu' == repeatclass),
+    simple.repeat =
+        filter(repeats, 'Simple_repeat' == repeatclass),
+    A.repeat =
+        filter(repeats, 'Simple_repeat' == repeatclass, '(A)n' == repeattype | '(T)n' == repeattype),
+    AT.repeat =
+        filter(repeats, 'Simple_repeat' == repeatclass, '(AT)n' == repeattype | '(TA)n' == repeattype),
+    A.rich =
+        filter(repeats, 'Low_complexity' == repeatclass, 'A-rich' == repeattype),
+    G.rich =
+        filter(repeats, 'Low_complexity' == repeatclass, 'G-rich' == repeattype),
+    GA.rich =
+        filter(repeats, 'Low_complexity' == repeatclass, 'GA-rich' == repeattype))
+features <- lapply(lapply(feature.dfs, make.granges), feature.from.ranges)
+```
+
+Examine how many features we have of each type.
+```{r featsCount}
+feats.count <- data.frame(
+    feat.name = names(feature.dfs),
+    n.repeats = sapply(feature.dfs, nrow),
+    n.nz.ranges = sapply(features, function(f) sum(0 != runValue(f)))) %>%
+    mutate(ratio = n.nz.ranges / n.repeats) %>%
+    arrange(ratio)
+feats.count
+```
+
+
+# Save features
+
+```{r saveFeatures}
+saveRDS(do.call(DataFrame, features), '../Data/Features/Sequence/repeats.rds')
+```
+
+
+# Session information
+
+`r date()` on `r Sys.info()[["nodename"]]`
+```{r sessionInfo}
+devtools::session_info()
+largest.objects()
+```

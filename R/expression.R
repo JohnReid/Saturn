@@ -45,3 +45,38 @@ expr.features.for.cell <- function(.cell) {
   #
   c(cell.expr, expr.of.interest[,.cell])
 }
+
+
+#' The directory for DNase features
+#'
+expr.features.dir <- function() file.path(saturn.data(), 'Features', 'Expr')
+
+
+#' The file for the nearest gene features
+#'
+nearest.gene.feature.file <- function()
+  file.path(expr.features.dir(), 'nearest-gene.rds')
+
+
+#' Load the expression features
+#'
+load.expr.feature <- memoise::memoise(function() {
+  message('Loading nearest gene features')
+  readRDS(nearest.gene.feature.file())
+})
+
+
+#' The file for the nearest gene expression feature
+#'
+nearest.expr.feature.file <- function(cell) file.path(
+  expr.features.dir(), stringr::str_c('nearest-expr-', cell, '.rds'))
+
+
+#' Load the DNase features for the cell
+#'
+load.nearest.expr.feature <- memoise::memoise(function(cell) {
+  message('Loading nearest expression features for cell ', cell)
+  readRDS(nearest.expr.feature.file(cell))
+})
+
+

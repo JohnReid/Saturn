@@ -240,6 +240,11 @@ ranges.ladder <- memoise::memoise(function() regions.to.ranges(regions.ladder))
 ranges.test <- memoise::memoise(function() regions.to.ranges(regions.test))
 
 
+#' The test ranges as a GNCList
+#'
+ranges.test.gnclist <- memoise::memoise(function() GNCList(ranges.test()))
+
+
 #' The training ranges
 #'
 ranges.train <- memoise::memoise(function() regions.to.ranges(regions.train))
@@ -316,3 +321,11 @@ parse.predictions.file <- function(file.name) {
     cell = fields[3],
     motif.tags = stringr::str_split(fields[4], stringr::fixed('_')))
 }
+
+#' Make GRanges from a data frame
+#'
+make.granges <- function(df, ...)
+    makeGRangesFromDataFrame(
+        df,
+        seqinfo = seqinfo(ranges.test()),
+        ...)

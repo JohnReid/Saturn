@@ -1,0 +1,160 @@
+---
+title: "Analyse the expression data"
+author: John Reid
+output: pdf_document
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('expr-features.Rmd')
+```
+
+```{r params, echo = FALSE}
+library(Saturn)
+# library(edgeR)
+library(stringr)
+library(ggplot2)
+library(ggthemes)
+library(GenomicRanges)
+library(S4Vectors)
+knitr::opts_chunk$set(fig.width = 18, fig.height = 12)
+```
+
+
+```{r writeBed, eval = FALSE, echo = FALSE}
+rtracklayer::export(ranges.test(), '../Data/annotations/test_regions.ordered.bed', 'BED')
+```
+
+
+# Load data
+
+Load expression data into data.frame.
+```{r loadExpr, message = FALSE}
+load_expr <- function(cell) {
+    .df <-
+        rbind(
+            saturn.expr(cell, 1) %>%
+                dplyr::select(gene = gene_id, TPM) %>%
+                dplyr::mutate(rep = 1, cell = cell),
+            saturn.expr(cell, 2) %>%
+                dplyr::select(gene = gene_id, TPM) %>%
+                dplyr::mutate(rep = 2, cell = cell)) %>%
+        dcast(gene ~ rep, value.var = 'TPM') %>%
+        setNames(c('gene', 'TPM1', 'TPM2')) %>%
+        mutate(cell = cell, TPM.avg = (TPM1 + TPM2) / 2)
+}
+expr <- do.call(rbind, lapply(cells$cell, load_expr))
+```
+
+Extract `ENSG` identifiers
+```{r extractENSG}
+expr$ENSGENE <- str_split_fixed(expr$gene, fixed('.'), 2)[,1]
+```
+
+# Compare replicates
+
+```{r compareReps}
+dim(expr)
+ggplot(expr, aes(x = TPM1, y = TPM2)) +
+    geom_point(alpha = .1) +
+    facet_wrap(~ cell) +
+    scale_x_log10() +
+    scale_y_log10() +
+    theme_few()
+ggsave('../Plots/expr-by-rep.png')
+```
+
+
+# Compare cells
+
+How many zeros are there in each cell?
+```{r cellZeros}
+cell.zeros <-
+    expr %>%
+    group_by(cell) %>%
+    summarise(N = n(), Nz = sum(0 == TPM.avg))
+ggplot(cell.zeros, aes(x = cell, y = Nz)) +
+    geom_bar(stat = 'identity') +
+    theme_few()
+```
+
+Compare expression densities across cells
+```{r compareCells}
+ggplot(expr %>% filter(TPM.avg > 0), aes(x = TPM.avg)) +
+    geom_density(fill = 'black') +
+    scale_x_log10() +
+    facet_wrap(~ cell) +
+    theme_few()
+ggsave('../Plots/expr-by-cell.pdf')
+```
+
+
+# Distance to closest gene
+
+Load closest gene information
+```{r closestGene}
+nearest <- rtracklayer::import('../Data/annotations/closest-genes.bed.gz')
+start(nearest) <- start(nearest) - 1
+end(nearest) <- end(nearest) - 1
+seqlevels(nearest) <- seqlevels(ranges.test())
+seqinfo(nearest) <- seqinfo(ranges.test())
+nearest <- sort(nearest)
+names(mcols(nearest)) <- c('ENSGENE', 'distance')
+mcols(nearest)$ENSGENE <- Rle(mcols(nearest)$ENSGENE)
+```
+
+Examine distribution of the distance to the nearest gene:
+```{r examDist}
+qplot(mcols(sample(nearest, 100000))$distance) + scale_x_log10() + theme_few()
+```
+
+Choose a length scale of `1e4`:
+```{r lengthScale}
+lengthscale <- 1e4
+mcols(nearest)$similarity <- exp(-(mcols(nearest)$distance/lengthscale)**2/2)
+qplot(mcols(sample(nearest, 10000))$similarity) + theme_few()
+```
+
+Bin the distances and the similarities:
+```{r binDists}
+n.bins <- 20     # How many distinct values will our features have?
+epsilon <- 1e-8  # Small adjustment to widen range
+nearest.feat <-
+    with(mcols(nearest),
+        DataFrame(
+            similarity = Rle(cut(similarity, seq(-epsilon, 1+epsilon, length.out = n.bins + 1))),
+            distance = Rle(cut(log10(distance+1), seq(-epsilon, log10(max(distance+1))+epsilon, length.out = n.bins + 1)))))
+sum(is.na(nearest.feat$similarity))
+sum(is.na(nearest.feat$distance))
+```
+
+Save distance features:
+```{r saveDist}
+saveRDS(nearest.feat, nearest.gene.feature.file())
+```
+
+
+# Expression of closest gene
+
+```{r nearestExpr}
+for (.cell in cells$cell) {
+    message(.cell)
+    cell.expr <-
+        as.data.frame(mcols(nearest)) %>%
+        left_join(
+            expr %>% filter(cell == .cell) %>% dplyr::select(ENSGENE, TPM.avg))
+    saveRDS(DataFrame(nearest.expr = Rle(cell.expr$TPM.avg)), nearest.expr.feature.file(.cell))
+}
+```
+
+
+# Session information
+
+`r date()` on `r Sys.info()[["nodename"]]`
+```{r sessionInfo}
+devtools::session_info()
+largest.objects()
+```
