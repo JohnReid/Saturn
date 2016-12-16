@@ -29,7 +29,7 @@ options(mc.cores = parallel::detectCores() - 1)
 
 # GC content
 
-Calculate GC content
+Calculate GC content (this can take some hours)...
 ```{r calcGC}
 calcGC <- function(x) sum(alphabetFrequency(x, as.prob = TRUE)[c("G", "C")])
 calcRangeGC <- function(idxs) {
