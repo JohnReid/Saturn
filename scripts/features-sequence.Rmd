@@ -22,32 +22,6 @@ library(GenomicRanges)
 knitr::opts_chunk$set(fig.width = 18, fig.height = 12)
 ```
 
-Configure number of cores for parallel operations:
-```{r confParallel}
-options(mc.cores = parallel::detectCores() - 1)
-```
-
-# GC content
-
-Calculate GC content
-```{r calcGC}
-calcGC <- function(x) sum(alphabetFrequency(x, as.prob = TRUE)[c("G", "C")])
-calcRangeGC <- function(idxs) {
-    seqs <- BSgenome::getSeq(hg19, ranges.test()[idxs])
-    sapply(seqs, calcGC)
-}
-# n.try <- 100000  # Calculate for a few test regions
-n.try <- length(ranges.test())  # Calculate for all regions
-idxs.split <- splitIndices(n.try, max(options('mc.cores'), ceiling(n.try / 1000000)))
-taken <- system.time(gc <- do.call(c, mclapply(idxs.split, calcRangeGC)))
-length(ranges.test()) / n.try * taken[['elapsed']] / 60 / 60  # Over 2 hours for all regions
-```
-
-Examine GC content
-```{r examGC}
-qplot(gc)
-```
-
 
 # CpG islands
 
@@ -132,6 +106,7 @@ Save features
 ```{r saveFeatures}
 saveRDS(do.call(DataFrame, features), '../Data/Features/Sequence/annotation.rds')
 ```
+
 
 # Session information
 

@@ -1,0 +1,69 @@
+---
+title: "Calculate GC content"
+author: John Reid
+output: pdf_document
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Execute this block to render this document.
+#
+devtools::load_all()
+rmarkdown::render('features-GC.Rmd')
+```
+
+```{r params, echo = FALSE}
+library(Saturn)
+# library(edgeR)
+library(Biostrings)
+library(ggplot2)
+library(ggthemes)
+library(GenomicRanges)
+knitr::opts_chunk$set(fig.width = 18, fig.height = 12)
+```
+
+Configure number of cores for parallel operations:
+```{r confParallel}
+options(mc.cores = parallel::detectCores() - 1)
+```
+
+# GC content
+
+Calculate GC content
+```{r calcGC}
+calcGC <- function(x) sum(alphabetFrequency(x, as.prob = TRUE)[c("G", "C")])
+calcRangeGC <- function(idxs) {
+    seqs <- BSgenome::getSeq(hg19, ranges.test()[idxs])
+    sapply(seqs, calcGC)
+}
+# n.try <- 100000  # Calculate for a few test regions
+n.try <- length(ranges.test())  # Calculate for all regions
+max.split.size <- 1000000
+n.splits <- max(options('mc.cores')[['mc.cores']], ceiling(n.try / max.split.size))
+
+idxs.split <- splitIndices(n.try, n.splits)
+lapply(idxs.split, length)
+taken <- system.time(gc <- do.call(c, mclapply(idxs.split, calcRangeGC)))
+length(ranges.test()) / n.try * taken[['elapsed']] / 60 / 60  # Over 2 hours for all regions
+length(gc)
+```
+
+Examine GC content
+```{r examGC}
+ggsave('../Plots/GC.pdf', qplot(sample(gc, 100000)) + geom_rug(alpha = .05) + theme_few())
+```
+
+Save features
+```{r saveGC}
+saveRDS(DataFrame(GC = gc), '../Data/Features/Sequence/GC.rds')
+```
+
+
+
+# Session information
+
+`r date()` on `r Sys.info()[["nodename"]]`
+```{r sessionInfo}
+devtools::session_info()
+largest.objects()
+```
