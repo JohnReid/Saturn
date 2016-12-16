@@ -112,6 +112,7 @@ features <- lapply(lapply(feature.dfs, make.granges), feature.from.ranges)
 ```
 
 ```{r testFeats, eval = FALSE, echo = FALSE}
+#
 # Examine the different between G.rich features and simple.repeat features
 # Simple repeats should be a superset of the G.rich features
 simple.gr <- make.granges(feature.dfs$simple.repeat)
