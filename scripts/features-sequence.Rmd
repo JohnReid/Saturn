@@ -49,14 +49,8 @@ saveRDS(DataFrame(CpG = feat.cpg), '../Data/Features/Sequence/CpG.rds')
 Load the annotations
 ```{r loadAnno}
 system.time(anno <- rtracklayer::import('../Data/annotations/Homo_sapiens.GRCh37.82.gtf.gz'))
-?import.gff
 seqlevelsStyle(anno) <- "UCSC"
 anno <- anno[seqnames(anno) %in% seqlevels(ranges.test())]
-anno <- dropSeqlevels(anno)
-seqinfo(anno) <- seqinfo(ranges.test())
-seqinfo(anno)
-seqinfo(ranges.test())
-seqlevels(anno)
 mcols(anno)$type <- factor(mcols(anno)$type)
 names(mcols(anno))
 head(mcols(anno))
