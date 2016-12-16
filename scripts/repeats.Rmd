@@ -76,7 +76,7 @@ repeats %>%
 
 ```{r examRepeats, echo = FALSE, eval = FALSE}
 repeats %>%
-    filter('Simple_repeat' == repeatclass, '(C)n' == repeattype) %>%
+    filter('Simple_repeat' == repeatclass, '(CG)n' == repeattype) %>%
     summarise(n = n())
 repeats %>%
     filter('Simple_repeat' == repeatclass) %>%
@@ -93,15 +93,15 @@ feature.dfs <- list(
     LTR =
         filter(repeats, repeatclass %in% repeatclasses[str_detect(repeatclasses, 'LTR')]),
     SINE.MIR =
-        filter(repeats, 'SINE/MIR' == repeatclass),
+        filter(repeats, 'SINE/MIR'       == repeatclass),
     SINE.Alu =
-        filter(repeats, 'SINE/Alu' == repeatclass),
+        filter(repeats, 'SINE/Alu'       == repeatclass),
     simple.repeat =
-        filter(repeats, 'Simple_repeat' == repeatclass),
+        filter(repeats, 'Simple_repeat'  == repeatclass),
     A.repeat =
-        filter(repeats, 'Simple_repeat' == repeatclass, '(A)n' == repeattype | '(T)n' == repeattype),
+        filter(repeats, 'Simple_repeat'  == repeatclass, '(A)n' == repeattype  | '(T)n' == repeattype),
     AT.repeat =
-        filter(repeats, 'Simple_repeat' == repeatclass, '(AT)n' == repeattype | '(TA)n' == repeattype),
+        filter(repeats, 'Simple_repeat'  == repeatclass, '(AT)n' == repeattype | '(TA)n' == repeattype),
     A.rich =
         filter(repeats, 'Low_complexity' == repeatclass, 'A-rich' == repeattype),
     G.rich =
@@ -111,13 +111,36 @@ feature.dfs <- list(
 features <- lapply(lapply(feature.dfs, make.granges), feature.from.ranges)
 ```
 
+```{r testFeats, eval = FALSE, echo = FALSE}
+#
+# Examine the different between G.rich features and simple.repeat features
+# Simple repeats should be a superset of the G.rich features
+simple.gr <- make.granges(feature.dfs$simple.repeat)
+atrepeat.gr <- make.granges(feature.dfs$AT.repeat)
+simple.f <- features$simple.repeat
+atrepeat.f <- features$AT.repeat
+# Which ranges have a G.rich feature but not a simple repeat?
+bad.ranges <- which(atrepeat.f & ! simple.f)
+length(bad.ranges)
+stopifnot(0 == length(bad.ranges))
+
+# Choose one
+bad.idx <- sample(bad.ranges, 1)
+bad.gr <- ranges.test()[bad.idx]
+# Examine overlaps
+findOverlaps(bad.gr, simple.gr)
+findOverlaps(bad.gr, atrepeat.gr)
+feature.from.ranges(simple.gr)[bad.idx]
+```
+
 Examine how many features we have of each type.
 ```{r featsCount}
-feats.count <- data.frame(
-    feat.name = names(feature.dfs),
-    n.repeats = sapply(feature.dfs, nrow),
-    n.nz.ranges = sapply(features, function(f) sum(0 != runValue(f)))) %>%
-    mutate(ratio = n.nz.ranges / n.repeats) %>%
+feats.count <-
+    data.frame(
+        feat.name = names(feature.dfs),
+        n.repeats = sapply(feature.dfs, nrow),
+        n.ranges = sapply(features, function(f) sum(0 != f))) %>%
+    mutate(ratio = n.ranges / n.repeats) %>%
     arrange(ratio)
 feats.count
 ```

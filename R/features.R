@@ -38,17 +38,18 @@ load.feature.from.file <- memoise::memoise(function(file.name) {
 #' Make a feature by calculating the width of its intersect with each test range
 #'
 feature.from.ranges <- function(feat.gr) {
-    #
-    # Calculate the overlaps between the test ranges and the feature locations
-    system.time(overlaps <- findOverlaps(ranges.test.gnclist(), reduce(feat.gr)))
-    #
-    # Calculate the widths of the overlaps per test range
-    overlapwidths <-
-        as.data.frame(overlaps) %>%
-        mutate(width = width(pintersect(ranges.test()[queryHits], feat.gr[subjectHits]))) %>%
-        group_by(queryHits) %>%
-        summarise(width = sum(width))
-    #
-    # Convert into a run-length-encoded vector feature
-    with(overlapwidths, Rle.from.sparse(length(ranges.test()), queryHits, width))
+  feat.reduced <- reduce(feat.gr)
+  #
+  # Calculate the overlaps between the test ranges and the feature locations
+  system.time(overlaps <- findOverlaps(ranges.test.gnclist(), reduce(feat.reduced)))
+  #
+  # Calculate the widths of the overlaps per test range
+  overlapwidths <-
+      as.data.frame(overlaps) %>%
+      mutate(width = width(pintersect(ranges.test()[queryHits], feat.reduced[subjectHits]))) %>%
+      group_by(queryHits) %>%
+      summarise(width = sum(width))
+  #
+  # Convert into a run-length-encoded vector feature
+  with(overlapwidths, Rle.from.sparse(length(ranges.test()), queryHits, width))
 }
