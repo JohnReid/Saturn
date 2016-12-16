@@ -9,7 +9,7 @@ output: pdf_document
 # Execute this block to render this document.
 #
 devtools::load_all()
-rmarkdown::render('expr-features.Rmd')
+rmarkdown::render('features-expr.Rmd')
 ```
 
 ```{r params, echo = FALSE}
