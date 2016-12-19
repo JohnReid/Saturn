@@ -76,7 +76,8 @@ scores$cell <- factor(parsed[,2], levels = cell.levels)
 scores$motif.tags <- factor(stringr::str_replace(parsed[,3], 'DREME-.*', 'DREME'))
 scores$method <- factor(parsed[,4])
 scores$tag <- factor(parsed[,5])
-sapply(scores, class)
+# sapply(scores, class)
+message('Loaded scores. # rows, ', nrow(scores))
 
 
 #
@@ -84,6 +85,7 @@ sapply(scores, class)
 #
 if (! is.null(method.re)) scores <- filter(scores, stringr::str_detect(method, method.re))
 if (! is.null(   tag.re)) scores <- filter(scores, stringr::str_detect(tag   ,    tag.re))
+message('Filtered scores by arguments. # rows, ', nrow(scores))
 
 
 #
@@ -95,6 +97,7 @@ num.preds <-
   summarise(num.preds = n())
 most.preds = max(num.preds$num.preds)
 scores.filtered <- scores %>% left_join(num.preds) %>% filter(most.preds == num.preds)
+message('Filtered scores with all predictions. # rows, ', nrow(scores.filtered))
 
 
 #
