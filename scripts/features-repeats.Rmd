@@ -149,7 +149,7 @@ feats.count
 # Save features
 
 ```{r saveFeatures}
-saveRDS(do.call(DataFrame, features), '../Data/Features/Sequence/repeats.rds')
+saveRDS(do.call(DataFrame, features), '../Data/Features/Repeats/Repeats.rds')
 ```
 
 

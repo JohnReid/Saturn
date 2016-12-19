@@ -55,7 +55,7 @@ ggsave('../Plots/GC.pdf', qplot(sample(gc, 100000)) + geom_rug(alpha = .05) + th
 
 Save features
 ```{r saveGC}
-saveRDS(DataFrame(GC = gc), '../Data/Features/Sequence/GC.rds')
+saveRDS(DataFrame(GC = gc), '../Data/Features/GC/GC.rds')
 ```
 
 

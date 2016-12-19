@@ -125,15 +125,15 @@ epsilon <- 1e-8  # Small adjustment to widen range
 nearest.feat <-
     with(mcols(nearest),
         DataFrame(
-            similarity = Rle(cut(similarity, seq(-epsilon, 1+epsilon, length.out = n.bins + 1))),
-            distance = Rle(cut(log10(distance+1), seq(-epsilon, log10(max(distance+1))+epsilon, length.out = n.bins + 1)))))
+            similarity = Rle(as.numeric(cut(similarity, seq(-epsilon, 1+epsilon, length.out = n.bins + 1)))),
+            distance = Rle(as.numeric(cut(log10(distance+1), seq(-epsilon, log10(max(distance+1))+epsilon, length.out = n.bins + 1))))))
 sum(is.na(nearest.feat$similarity))
 sum(is.na(nearest.feat$distance))
 ```
 
 Save distance features:
 ```{r saveDist}
-saveRDS(nearest.feat, nearest.gene.feature.file())
+saveRDS(nearest.feat, '../Data/Features/GeneDist/GeneDist.rds')
 ```
 
 
@@ -146,7 +146,9 @@ for (.cell in cells$cell) {
         as.data.frame(mcols(nearest)) %>%
         left_join(
             expr %>% filter(cell == .cell) %>% dplyr::select(ENSGENE, TPM.avg))
-    saveRDS(DataFrame(nearest.expr = Rle(cell.expr$TPM.avg)), nearest.expr.feature.file(.cell))
+    saveRDS(
+        DataFrame(nearest.expr = Rle(cell.expr$TPM.avg)),
+        stringr::str_c('../Data/Features/NearExpr/NearExpr-', .cell, '.rds'))
 }
 ```
 

@@ -40,7 +40,7 @@ ggplot(CpG, aes(x = perCpg, y = cpgNum)) + geom_point() + theme_few()
 Create and save the Cpg island feature
 ```{r featCreate}
 feat.cpg <- feature.from.ranges(make.granges(CpG, starts.in.df.are.0based = TRUE))
-saveRDS(DataFrame(CpG = feat.cpg), '../Data/Features/Sequence/CpG.rds')
+saveRDS(DataFrame(CpG = feat.cpg), '../Data/Features/CpG/CpG.rds')
 ```
 
 
@@ -98,7 +98,7 @@ features <- lapply(feature.dfs, feature.from.ranges)
 
 Save features
 ```{r saveFeatures}
-saveRDS(do.call(DataFrame, features), '../Data/Features/Sequence/annotation.rds')
+saveRDS(do.call(DataFrame, features), '../Data/Features/Annotation/Annotation.rds')
 ```
 
 
