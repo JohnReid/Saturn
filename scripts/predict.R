@@ -60,6 +60,8 @@ library(stringr)
 # .args <- "--tag=test --method=xgboost -f DNase -f DREMEWell --expr -s .01 ATF2 GM12878"
 # .args <- "--tag=test --method=xgboost --sample=.1 --max-boosting=30 -f DNase -f DREMEWell ATF2 GM12878"
 # .args <- "--tag=remove --method=xgboost -r -f DNase -f Known -f KnownWell -f DREME -f DREMEWell --max-boosting=5555 E2F1 GM12878"
+# .args <- "--tag=test --method=xgboost -s .1 -d -f DNase -f Known -f KnownWell -f DREME -f DREMEWell --max-boosting=5555 MAX H1-hESC"
+.args <- "--tag=test --method=xgboost -s .1 -d -f DNase -f KnownWell -f DREMEWell -f Annotation -f CpG -f GeneDist -f NearExpr -f Repeats --max-boosting=5555 MAX H1-hESC"
 # .args <- "--method=xgboost --max-boosting=30 -d -f DNase -f Known CEBPB A549"
 # Use dummy arguments if they exist otherwise use command line arguments
 if (! exists(".args")) .args <- commandArgs(TRUE)
@@ -195,7 +197,7 @@ message('ChIP data size: ', object.size(chip))
 
 #
 # Work out which regions to use in each cell, ignoring
-# that are not in our training or validation sets.
+# those which are not in our training or validation sets.
 #
 train.idxs <- regions.test$chrom %in% chrs.train
 valid.idxs <- regions.test$chrom %in% chrs.valid
@@ -214,6 +216,65 @@ regions.for.cell <- function(cell) {
 #' Get the proportion bound
 #'
 prop.bound <- function(binding) sum('B' == binding) / length(binding)
+
+
+if (FALSE) {
+
+  rle.to.abindex <- function(x) {
+    idx <- 1
+    l <- list()
+    for (i in 1:nrun(x)) {
+      if (runValue(x)[i]) {
+        newidx <- idx + runLength(x)[i]
+        l <- c(l, Matrix::abIseq1(idx, newidx - 1))
+        idx <- newidx
+      }
+    }
+    do.call(c, l)
+  }
+  rle.to.abindex(keep)
+
+  m2 <- Matrix::Matrix(1:1000000, nrow = 1000, ncol = 1000, sparse = TRUE)
+  keep <- S4Vectors::Rle(c(F, T, F, T, F), c(10, 10, 10, 10, 960))
+  idx <- rle.to.abindex(keep)
+  class(idx)
+  m2[idx,]
+  class(m2)
+
+  feat.names
+  file.name <- feature.file('DREMEWell', 'MAX', 'A549')
+  feat <- readRDS(file.name)
+  object.size(load.feature('DNase', 'MAX', 'A549'))
+  dreme.well <- load.feature('DREMEWell', 'MAX', 'A549')
+  dim(dreme.well)
+  class(dreme.well)
+  object.size(dreme.well)
+  keep <- regions.for.cell('A549')
+  length(keep)
+  runValue(keep)
+  runLength(keep)
+  class(keep)
+  sum(0 != keep)
+  keep
+  object.size(keep)
+  object.size(as.rle(keep))
+  object.size(as.vector(keep))
+  keep.rle <- rle(as.vector(keep))
+  class(keep.rle)
+  rle
+  object.size(as.vector(keep))
+  object.size(which(keep))
+  dreme.well[keep, , drop = FALSE]
+  load.feature('DNase', 'MAX', 'A549')
+  lapply(feat.names, function(feat.name) load.feature(feat.name, tf, cell)[as.vector(keep), , drop = FALSE])
+
+  sm <- Matrix::Matrix(0, nrow = 10, ncol = 3, sparse = TRUE)
+  dm <- Matrix::Matrix(0, nrow = 10, ncol = 3, sparse = FALSE)
+  class(sm)
+  class(dm)
+  class(cbind(sm, dm))
+  class(cbind(dm, sm))
+}
 
 
 #

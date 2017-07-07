@@ -27,12 +27,23 @@ feature.file <- function(feature.name, tf, cell) {
 load.feature <- function(feature.name, tf, cell) load.feature.from.file(feature.file(feature.name, tf, cell))
 
 
-#' Load a feature from a file (cached)
+#' Read a feature from a file (cached)
 #'
-load.feature.from.file <- memoise::memoise(function(file.name) {
+read.feature.from.file <- memoise::memoise(function(file.name) {
   message('Loading feature: ', file.name)
-  as(readRDS(file.name), "Matrix")
+  readRDS(file.name)
 })
+
+
+#' Load a feature from a file and convert to a Matrix
+#'
+load.feature.from.file <- function(file.name, keep.idx = NULL) {
+  feat <- read.feature.from.file(file.name)
+  if (! is.null(keep.idx)) {
+    feat <- feat[keep.idx, ]
+  }
+  as(feat, "Matrix")
+}
 
 
 #' Make a feature by calculating the width of its intersect with each test range
